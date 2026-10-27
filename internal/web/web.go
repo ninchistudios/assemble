@@ -51,6 +51,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) { s.handler.S
 
 func (s *Server) routes() {
 	s.mux.HandleFunc("GET /{$}", s.handleHome)
+	s.mux.HandleFunc("GET /style", s.handleStyle)
 
 	// Unauthenticated. Liveness plus the build, so a deploy can be confirmed
 	// from outside without signing in.
@@ -62,7 +63,7 @@ func (s *Server) routes() {
 
 	// Everything else is a styled 404 rather than the mux's plain-text one.
 	s.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		s.render(w, http.StatusNotFound, "message.html", page{Title: "not found", Message: "there's nothing here."})
+		s.render(w, http.StatusNotFound, "message.html", page{Title: "Not found", Message: "There's nothing here."})
 	})
 }
 
@@ -147,4 +148,10 @@ func (s *Server) staticHandler() http.Handler {
 
 func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 	s.render(w, http.StatusOK, "home.html", page{})
+}
+
+// handleStyle shows the palette, type and icons on a real device. See
+// docs/ui.md.
+func (s *Server) handleStyle(w http.ResponseWriter, r *http.Request) {
+	s.render(w, http.StatusOK, "style.html", page{Title: "Style"})
 }

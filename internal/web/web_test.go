@@ -66,6 +66,35 @@ func TestSecurityHeadersOnEveryResponse(t *testing.T) {
 	}
 }
 
+// The font is self-hosted; a wrong content type makes some browsers refuse it
+// and fall back silently to the system sans.
+func TestFontServedAsWoff2(t *testing.T) {
+	rec := get(t, newServer(t), "/static/fonts/manrope-latin.woff2")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET font = %d", rec.Code)
+	}
+	if ct := rec.Header().Get("Content-Type"); ct != "font/woff2" {
+		t.Errorf("font Content-Type = %q, want font/woff2", ct)
+	}
+}
+
+func TestStylePageShowsEveryStatus(t *testing.T) {
+	rec := get(t, newServer(t), "/style")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET /style = %d", rec.Code)
+	}
+	body := rec.Body.String()
+	for _, st := range []string{"status-yes", "status-ok", "status-no", "status-unknown"} {
+		if !strings.Contains(body, st) {
+			t.Errorf("/style missing %s", st)
+		}
+	}
+	// The CSP forbids inline styles, so any style attribute is a silent bug.
+	if strings.Contains(body, "style=") {
+		t.Error("/style contains an inline style attribute")
+	}
+}
+
 func TestStaticRevalidates(t *testing.T) {
 	s := newServer(t)
 	rec := get(t, s, "/static/assemble.css")

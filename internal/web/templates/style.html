@@ -1,0 +1,74 @@
+{{define "style.html"}}{{template "top" .}}
+<h2>Style</h2>
+<p class="muted">The palette, type and icons every page is built from. Spec: <code>docs/ui.md</code>.</p>
+
+<h3>Palette</h3>
+<div class="swatches">
+<div class="swatch"><i class="sw-bg"></i><b>bg</b><span class="muted">#15171c</span></div>
+<div class="swatch"><i class="sw-surface"></i><b>surface</b><span class="muted">#1e2128</span></div>
+<div class="swatch"><i class="sw-surface-2"></i><b>surface-2</b><span class="muted">#272b34</span></div>
+<div class="swatch"><i class="sw-line"></i><b>line</b><span class="muted">#323743</span></div>
+<div class="swatch"><i class="sw-text"></i><b>text</b><span class="muted">#efeae2</span></div>
+<div class="swatch"><i class="sw-muted"></i><b>muted</b><span class="muted">#9ba1ad</span></div>
+<div class="swatch"><i class="sw-accent"></i><b>accent</b><span class="muted">#b4a2f0</span></div>
+<div class="swatch"><i class="sw-yes"></i><b>yes</b><span class="muted">#74c69d</span></div>
+<div class="swatch"><i class="sw-ok"></i><b>ok</b><span class="muted">#e6b450</span></div>
+<div class="swatch"><i class="sw-no"></i><b>no</b><span class="muted">#ec7a64</span></div>
+<div class="swatch"><i class="sw-unknown"></i><b>unknown</b><span class="muted">#6b7280</span></div>
+</div>
+
+<h3>Status</h3>
+<div class="status-set">
+<figure>{{template "status" "yes"}}<figcaption>YES</figcaption></figure>
+<figure>{{template "status" "ok"}}<figcaption>OK</figcaption></figure>
+<figure>{{template "status" "no"}}<figcaption>NO</figcaption></figure>
+<figure>{{template "status" "unknown"}}<figcaption>?</figcaption></figure>
+</div>
+<p class="muted">As a picker, with OK chosen:</p>
+<div class="status-set">
+<figure>{{template "status-off" "yes"}}<figcaption>YES</figcaption></figure>
+<figure>{{template "status" "ok"}}<figcaption>OK</figcaption></figure>
+<figure>{{template "status-off" "no"}}<figcaption>NO</figcaption></figure>
+<figure>{{template "status-off" "unknown"}}<figcaption>?</figcaption></figure>
+</div>
+
+<h3>Type</h3>
+<p class="type-sample w800">Saturday 14 November</p>
+<p class="type-sample w700">Band practice, 19:00–22:00</p>
+<p class="type-sample w600">Three of five are free</p>
+<p class="type-sample w500">Body text is Manrope at 500. Names, notes and anything people read.</p>
+<p class="type-sample w400 muted">Muted text for secondary detail.</p>
+<p><a href="/style">A link</a> and <code>a code string</code>.</p>
+
+<h3>A day, as members will see it</h3>
+<ul class="rows">
+<li>{{template "status" "yes"}}<span class="grow">Alex<span class="meta">Drums</span></span></li>
+<li>{{template "status" "ok"}}<span class="grow">Sam<span class="meta">Bass</span></span></li>
+<li>{{template "status" "no"}}<span class="grow">Jordan<span class="meta">Guitar</span></span></li>
+<li>{{template "status" "unknown"}}<span class="grow">Riley<span class="meta">Vocals</span></span></li>
+</ul>
+
+<h3>Rows</h3>
+<ul class="rows">
+<li><span class="grow">Riley Example<span class="meta">riley@example.com · joined 3 Nov</span></span><span class="tag">admin</span></li>
+<li><span class="grow">Sam Example<span class="meta">sam@example.com · joined 4 Nov</span></span><span class="tag">disabled</span></li>
+</ul>
+
+<h3>Buttons</h3>
+<a class="btn" href="/style">Primary action</a>
+<button class="btn btn-quiet" type="button">Quiet action</button>
+<button class="btn btn-danger" type="button">Disable</button>
+
+<h3>Fields</h3>
+<div class="field"><label for="s-name">Group name</label><input id="s-name" type="text" value="The Example Band"></div>
+<div class="field-row">
+<div class="field"><label for="s-start">Starts</label><input id="s-start" type="time" value="19:00"></div>
+<div class="field"><label for="s-end">Ends</label><input id="s-end" type="time" value="22:00"></div>
+</div>
+<div class="field"><label for="s-tz">Timezone <span class="muted">IANA name</span></label><select id="s-tz"><option>Australia/Brisbane</option></select></div>
+
+<h3>Notices</h3>
+<div class="notice">Something worth knowing.</div>
+<div class="notice ok">Saved.</div>
+<div class="notice error">That didn't work. Try again.</div>
+{{template "bottom" .}}{{end}}
