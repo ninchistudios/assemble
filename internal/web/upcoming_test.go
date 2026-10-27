@@ -42,7 +42,8 @@ func TestUpcoming(t *testing.T) {
 	if !strings.Contains(body, `aria-label="0 yes, 0 ok, 0 no, 1 not answered"`) {
 		t.Error("the 21st's bar isn't just the others")
 	}
-	if !strings.Contains(body, `class="bar-head">Others<`) || !strings.Contains(body, `class="mine-head">You<`) {
-		t.Error("no Others / You column headings")
+	// The column headings repeat on each month heading: three months here.
+	if n := strings.Count(body, `>Others<`); n != 3 || strings.Count(body, `>You<`) != 3 {
+		t.Errorf("Others/You headings = %d, want one per month (3)", n)
 	}
 }
