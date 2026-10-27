@@ -8,9 +8,15 @@ Each Docker container runs one group, which signs in with Google and joins throu
 
 ## Status
 
-**2026.1** covers the foundation: Google sign-in, invite links, member management and group settings. Members can sign in but there is nothing to fill in yet.
+**2026.2** is the first release a group can use day to day:
+- **Members** open the app on today, set their availability with one tap, swipe between days, and leave a short note.
+- **Everyone** sees each member's answer per day, plus an overview of the next two months.
+- **The admin** locks in a day. A member pulling out cancels it, after a confirm, and everyone gets a notice either way.
+- **Also:** members choose the name the group sees them by; the admin can keep a language filter for names and notes; and there are public privacy and terms pages for Google's consent screen.
 
-**2026.2** adds the calendar: setting availability, locking in days, and notifications. See [agents.md](agents.md) for the full design.
+**2026.1** laid the foundation: Google sign-in, invite links, member management and group settings.
+
+See [agents.md](agents.md) for the product design and [docs/calendar.md](docs/calendar.md) for how the calendar works.
 
 ## Quick start
 
@@ -26,14 +32,15 @@ This runs a private instance on your own machine at `http://localhost:8138`, sig
    - **Audience:** choose **External**.
    - **Contact information:** your email.
    - Agree to the policy and create.
-3. **Audience → Publish app**, so that the publishing status reads **In production**.
+3. **Branding:** under **App domain**, set the privacy policy link to `https://YOUR-DOMAIN/privacy` and the terms of service link to `https://YOUR-DOMAIN/terms`. `assemble` serves both pages without sign-in. They describe what the software stores; if you need wording specific to your group, take your own advice on it.
+4. **Audience → Publish app**, so that the publishing status reads **In production**.
    - This step matters. While the app is in **Testing**, only Google accounts you list by hand can sign in, so invite links fail for everyone else.
    - `assemble` asks only for the basic `openid`, `email` and `profile` scopes, so publishing needs no review from Google.
-4. **Clients → Create client** (older consoles: **Credentials → Create credentials → OAuth client ID**):
+5. **Clients → Create client** (older consoles: **Credentials → Create credentials → OAuth client ID**):
    - **Application type:** Web application
    - **Authorised redirect URIs:** `http://localhost:8138/auth/callback`
    - Add your public one too, if you'll deploy (e.g. `https://assemble.example.com/auth/callback`). One client can hold both.
-5. Copy the **client ID** and **client secret**. Newer consoles show the secret only once, so save it now.
+6. Copy the **client ID** and **client secret**. Newer consoles show the secret only once, so save it now.
 
 The redirect URI must match `ASSEMBLE_BASE_URL` plus `/auth/callback` exactly, including scheme and port. Google accepts `http` only for `localhost` and `127.0.0.1`. A LAN address like `http://192.168.1.20:8138` will be refused, so test from the machine running Docker.
 
@@ -64,7 +71,7 @@ docker compose up -d
 docker compose logs -f assemble
 ```
 
-The log should say `assemble 2026.1 ... listening on :8080 for http://localhost:8138`. Port 8080 is inside the container; you browse to 8138.
+The log should say `assemble <version> build <branch>:<commit> listening on :8080 for http://localhost:8138`. Port 8080 is inside the container; you browse to 8138.
 
 ### 4. Sign in and invite people
 
@@ -128,6 +135,7 @@ In VS Code, the **assemble: run local (dev sign-in)** task does the same. Sign i
 ## Docs
 
 - [docs/deployment.md](docs/deployment.md): production deployment, reverse proxy, backups, updates and troubleshooting
+- [docs/calendar.md](docs/calendar.md): how days, availability, lock-ins and notices work
 - [docs/testplan.md](docs/testplan.md): manual checks after each deploy
 - [docs/ui.md](docs/ui.md): the visual style, palette and icons
 - [agents.md](agents.md): product design and technical decisions

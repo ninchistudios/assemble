@@ -119,3 +119,7 @@ func TestValidateSettings(t *testing.T) {
 		}
 	}
 }
+
+func authInfo(sub, email, name string) auth.UserInfo {
+	return auth.UserInfo{Sub: sub, Email: email, EmailVerified: true, Name: name}
+}

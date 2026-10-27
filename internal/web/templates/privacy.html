@@ -1,0 +1,29 @@
+{{define "privacy.html"}}{{template "top" .}}
+<article class="legal">
+<h2>Privacy</h2>
+<p>{{.Group.GroupName}} uses <i>assemble</i>, open-source software for finding days a group can meet. This copy of it is run by the group's admin, not by the software's authors. This page says what it stores and why.</p>
+
+<h3>What is stored</h3>
+<ul>
+<li><b>From your Google account,</b> when you sign in: your name, your email address, and Google's ID for your account. Nothing else is requested: not your contacts, calendar, email or files.</li>
+<li><b>What you enter:</b> your availability for each day, any notes you add, and a display name if you choose one.</li>
+<li><b>To keep you signed in:</b> one cookie holding a random session code. The server keeps only a scrambled copy of it.</li>
+<li><b>Records of what happened:</b> for example, which days were locked in or cancelled, and by whom.</li>
+</ul>
+
+<h3>Who sees it</h3>
+<ul>
+<li><b>Everyone in the group</b> sees your name, your availability and your notes.</li>
+<li><b>The admin</b> also sees your email address.</li>
+<li><b>The server's logs</b> record sign-ins and refused requests, with an account number rather than your name or email. Whoever runs the server can read them.</li>
+</ul>
+<p>Nothing is sold or shared, and there are no adverts, analytics or third-party trackers. Google is involved only in signing you in.</p>
+
+<h3>How long it's kept</h3>
+<p>Your information stays for as long as this copy of <i>assemble</i> runs, including in its backups, unless the admin removes it. If the admin turns your access off, your past answers stay visible to the group.</p>
+
+<h3>Your choices</h3>
+<p>You can change your availability, notes and display name at any time. To have your information removed, ask your group's admin. To stop this app being able to sign you in, remove it in your <a href="https://myaccount.google.com/connections" rel="noopener noreferrer">Google account settings</a>.</p>
+</article>
+<nav class="menu"><a href="/">Back</a><a href="/terms">Terms</a></nav>
+{{template "bottom" .}}{{end}}

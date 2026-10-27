@@ -16,6 +16,7 @@ import (
 	"github.com/ninchistudios/assemble/internal/auth"
 	"github.com/ninchistudios/assemble/internal/config"
 	"github.com/ninchistudios/assemble/internal/store"
+	"github.com/ninchistudios/assemble/internal/words"
 )
 
 //go:embed templates/*.html
@@ -35,6 +36,9 @@ type Server struct {
 
 	// refusals rate-limits the log lines strangers can cause.
 	refusals *logLimiter
+
+	// now is the clock the calendar reads; tests replace it to pin "today".
+	now func() time.Time
 }
 
 // maxBody caps a request body. The largest real form is the group settings,
@@ -62,6 +66,7 @@ func New(cfg config.Config, db *store.Store) (*Server, error) {
 		mux:      http.NewServeMux(),
 		etags:    etags,
 		refusals: newLogLimiter(20, time.Hour),
+		now:      time.Now,
 	}
 	if err := s.bindExistingAdmin(); err != nil {
 		return nil, err
@@ -91,7 +96,17 @@ func (s *Server) bindExistingAdmin() error {
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) { s.handler.ServeHTTP(w, r) }
 
 func (s *Server) routes() {
-	s.mux.HandleFunc("GET /{$}", s.requireUser(s.handleHome))
+	// Calendar. Home is today.
+	s.mux.HandleFunc("GET /{$}", s.requireUser(s.handleToday))
+	s.mux.HandleFunc("GET /day/{date}", s.requireUser(s.handleDay))
+	s.mux.HandleFunc("GET /upcoming", s.requireUser(s.handleUpcoming))
+	s.mux.HandleFunc("GET /profile", s.requireUser(s.handleProfile))
+	s.mux.HandleFunc("POST /profile", s.requireUser(s.handleProfilePost))
+	s.mux.HandleFunc("POST /day/{date}/status", s.requireUser(s.handleSetStatus))
+	s.mux.HandleFunc("POST /day/{date}/note", s.requireUser(s.handleSetNote))
+	s.mux.HandleFunc("POST /day/{date}/lock", s.requireAdmin(s.handleLock))
+	s.mux.HandleFunc("POST /day/{date}/cancel", s.requireAdmin(s.handleCancel))
+	s.mux.HandleFunc("POST /notices/{id}/dismiss", s.requireUser(s.handleDismiss))
 	s.mux.HandleFunc("GET /style", s.requireAdmin(s.handleStyle))
 
 	// Admin.
@@ -110,6 +125,10 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /auth/callback", s.handleCallback)
 	s.mux.HandleFunc("POST /auth/logout", s.handleLogout)
 	s.mux.HandleFunc("GET /join/{token}", s.handleJoin)
+
+	// Public pages. Google's consent screen links here, so no sign-in.
+	s.mux.HandleFunc("GET /privacy", s.static("privacy.html", "Privacy"))
+	s.mux.HandleFunc("GET /terms", s.static("terms.html", "Terms"))
 	// Registered only under the bypass, which config.Load refuses to enable
 	// anywhere but http://localhost, so this cannot exist in production.
 	if s.cfg.DevBypass {
@@ -151,6 +170,14 @@ type page struct {
 	Saved   bool
 	Invites []inviteRow
 	Members []memberRow
+
+	DayView  *dayView
+	Confirm  *confirmForm
+	Notices  []noticeView // the signed-in member's live notices
+	Upcoming []upcomingRow
+
+	MaxDisplayName int
+	StatusIcons    []string // icon names, for the day page script to copy
 
 	DevBypass bool
 	Local     bool   // a test copy on this machine: the header says so
@@ -234,12 +261,29 @@ func (s *Server) render(w http.ResponseWriter, status int, name string, p page) 
 	p.DevBypass = s.cfg.DevBypass
 	p.Local = s.cfg.Local()
 	p.Group = s.groupSettings()
+	// Mask anything the language filter catches in what every page shows.
+	f := words.New(p.Group.BannedWords)
+	p.Group.GroupName = f.Mask(p.Group.GroupName)
+	if p.User != nil {
+		masked := *p.User
+		masked.Name, masked.DisplayName, masked.GoogleName = f.Mask(masked.Name), f.Mask(masked.DisplayName), f.Mask(masked.GoogleName)
+		p.User = &masked
+		p.Notices = s.noticesFor(p.User, f)
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
 	if err := s.tpl.ExecuteTemplate(w, name, p); err != nil {
 		// Status and headers are already on the wire, so this cannot become a
 		// 500. Log it; the client gets a truncated page.
 		log.Printf("render %s: %v", name, err)
+	}
+}
+
+// static serves a page that needs nothing but the layout. It shows whoever
+// is signed in, but never requires it.
+func (s *Server) static(name, title string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		s.render(w, http.StatusOK, name, page{Title: title, User: s.currentUser(w, r)})
 	}
 }
 
@@ -293,10 +337,6 @@ func (s *Server) staticHandler() http.Handler {
 
 func (s *Server) notFound(w http.ResponseWriter) {
 	s.render(w, http.StatusNotFound, "message.html", page{Title: "Not found", Message: "There's nothing here."})
-}
-
-func (s *Server) handleHome(w http.ResponseWriter, r *http.Request, u *store.User) {
-	s.render(w, http.StatusOK, "home.html", page{User: u})
 }
 
 // handleStyle shows the palette, type and icons on a real device. See

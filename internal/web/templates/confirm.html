@@ -1,0 +1,9 @@
+{{define "confirm.html"}}{{template "top" .}}
+<h2>{{.Title}}</h2>
+<p>{{.Message}}</p>
+{{with .Confirm}}<form method="post" action="{{.Action}}">
+{{range $k, $v := .Fields}}<input type="hidden" name="{{$k}}" value="{{$v}}">{{end}}
+<button class="btn" type="submit">{{.Button}}</button>
+</form>
+<a class="btn btn-quiet" href="{{.Back}}">Go back</a>{{end}}
+{{template "bottom" .}}{{end}}

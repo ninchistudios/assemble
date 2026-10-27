@@ -15,6 +15,9 @@ The core use case is `band practice`, where multiple people need to coordinate t
 * as an instance admin, I can enable/disable access for other users
 * as an instance admin, I can generate and disable group invite links
 * as an instance admin, I can mark/unmark a day as `locked-in`
+* as a group member, I can add a public note to my answer for a day
+* as a group member, I can choose the display name the group sees
+* as an instance admin, I can keep a language filter for free text
 
 # FRs
 
@@ -58,7 +61,7 @@ The core use case is `band practice`, where multiple people need to coordinate t
 * **Go** - single static binary serving the UI and API in one process.
 * **Go stdlib plus one module: `modernc.org/sqlite`.** It is pure Go, so `CGO_ENABLED=0` and a `distroless/static` base still work. The bar for adding any other module is "nothing that churns". Google sign-in is two HTTP calls done by hand, not `x/oauth2` or `go-oidc`.
 * **stdlib `html/template`**, server-rendered. No templ, because it needs codegen and a CLI in the build path.
-* **A vanilla JS island for the day view only** (tap to set status, swipe to the next day). It posts JSON. Everything else is plain links and forms that work without JS. Add htmx only if a second interactive page appears, and then vendor and pin it.
+* **Small vanilla JS islands, no framework:** the day view (tap to set status, notes, swipe between days), dismissing notices, and copy/share/confirm on the admin pages. They post JSON or enhance plain forms, and every page still works without JS. Reconsider htmx only if pages start needing to swap fragments of markup; then vendor and pin it.
 * **SQLite** on a Docker volume, in WAL mode, never baked into the image. Back up by copying the file (or with `VACUUM INTO`).
 * **Days are calendar dates in the group timezone** (`YYYY-MM-DD`), not UTC instants. A day's availability never moves when DST changes or when the admin changes the timezone. Store the timezone as an IANA name (e.g. `Australia/Sydney`), not an abbreviation like AEST. Import `time/tzdata` so zones resolve whatever the base image is.
 * **One container.** GitHub Actions builds the image and publishes it to GHCR. `VERSION` (CalVer `YYYY.n`) drives the release tag.

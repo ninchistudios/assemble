@@ -128,6 +128,10 @@ header nav { margin-left: auto; }
 header .env-tag { margin-left: auto; background: var(--no); color: var(--on-danger); }
 
 footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   padding: 1rem 0;
   color: var(--muted);
   font-size: .75rem;
@@ -173,6 +177,8 @@ a { color: var(--accent); font-weight: 650; text-decoration-thickness: 2px; text
 }
 .btn-danger { background: var(--danger); color: var(--on-danger); }
 .btn + .btn, .btn + form, form + .btn, form + form { margin-top: .75rem; }
+/* Full width like a primary button, but not competing with it. */
+.btn-secondary { background: var(--surface-2); color: var(--text); }
 /* Row actions: still a 40px target, but sized to the label. */
 .btn-small { width: auto; min-width: 0; min-height: 40px; padding: .4rem .8rem; font-size: .9rem; }
 form.inline { display: inline; }
@@ -180,7 +186,7 @@ form.inline { display: inline; }
 /* ---- forms ---------------------------------------------------------------- */
 label { display: block; font-weight: 700; margin: 0 0 .35rem; }
 label .muted { font-weight: 500; }
-input[type="text"], input[type="time"], input[type="url"], select {
+input[type="text"], input[type="time"], input[type="url"], select, textarea {
   display: block;
   width: 100%;
   min-height: var(--tap);
@@ -299,6 +305,194 @@ input:focus-visible, select:focus-visible { outline: none; border-color: var(--a
 .status-set figure { margin: 0; text-align: center; }
 .status-set figcaption { margin-top: .3rem; font-size: .8rem; font-weight: 750; letter-spacing: .04em; }
 
+/* ---- notices ---------------------------------------------------------------
+   Above the page content on every signed-in page. Locked-in notices take the
+   accent like the lock banner; cancellations take the NO colour. */
+.notices { list-style: none; margin: 0 0 1rem; padding: 0; }
+.notices li {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .3rem .3rem .3rem .9rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+.notices li + li { margin-top: 6px; }
+.notices li.notice-cancelled { box-shadow: inset 4px 0 0 var(--no); }
+.notices a { flex: 1; min-width: 0; color: var(--text); text-decoration: none; font-weight: 600; }
+.notices a b { font-weight: 750; }
+.notices form { margin: 0; }
+.notices button {
+  display: flex;
+  padding: 2px;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.x-icon { width: 30px; height: 30px; }
+.x-icon rect { fill: var(--surface-2); }
+.x-icon path { fill: none; stroke: var(--muted); stroke-width: 4; stroke-linecap: round; }
+
+/* ---- day view -------------------------------------------------------------- */
+.day-head { display: flex; align-items: center; gap: .5rem; margin: .25rem 0 1rem; }
+.day-title { flex: 1; min-width: 0; text-align: center; }
+.day-title h2 { margin: 0; font-size: 1.35rem; }
+.day-title .tag { margin-top: .3rem; }
+.day-step {
+  flex: none;
+  width: var(--tap);
+  height: var(--tap);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1.6rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+span.day-step { background: none; }
+
+/* The four status buttons share the row equally. The filled and outlined
+   icons are both in the page; aria-pressed picks which one shows, so the
+   script only has to flip one attribute. */
+.picker { display: flex; gap: 10px; margin: 0 0 1rem; }
+.pick {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .35rem;
+  padding: .5rem 0 .4rem;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+.pick .status { width: 56px; height: 56px; }
+.pick-label { font-size: .8rem; font-weight: 750; letter-spacing: .04em; }
+/* The chosen option gets a solid border in its own status colour. */
+.pick[aria-pressed="true"] { background: var(--surface-2); color: var(--text); box-shadow: inset 0 0 0 3px var(--muted); }
+.pick[value="yes"][aria-pressed="true"] { box-shadow: inset 0 0 0 3px var(--yes); }
+.pick[value="ok"][aria-pressed="true"] { box-shadow: inset 0 0 0 3px var(--ok); }
+.pick[value="no"][aria-pressed="true"] { box-shadow: inset 0 0 0 3px var(--no); }
+.pick[aria-pressed="true"] .off,
+.pick[aria-pressed="false"] .on { display: none; }
+.pick:disabled { cursor: default; opacity: .55; }
+.picker-error { margin-top: -.25rem; }
+
+/* Locked in: the accent rather than a status colour, because a booking is a
+   different kind of thing from anyone's answer. */
+.lock-banner {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .6rem .8rem;
+  margin: 0 0 1rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.lock-icon { width: 36px; height: 36px; flex: none; }
+.lock-icon rect:first-child { fill: var(--accent); }
+.lock-icon path { fill: none; stroke: var(--on-accent); stroke-width: 4; stroke-linecap: round; }
+.lock-icon .body { fill: var(--on-accent); }
+
+.note-form { display: flex; gap: 8px; margin: -.25rem 0 1rem; }
+.note-form input { flex: 1; min-width: 0; }
+.note-form .btn { margin: 0; }
+.group .note:empty { display: none; }
+
+.summary { display: block; font-size: .85rem; font-weight: 600; margin-top: .15rem; }
+.group .mini .status { width: 32px; height: 32px; }
+.group .status-word { color: var(--muted); font-size: .8rem; font-weight: 750; letter-spacing: .04em; }
+.group li[data-me] { box-shadow: inset 3px 0 0 var(--accent); }
+
+.menu { display: flex; gap: 1.25rem; align-items: center; margin-top: 2rem; }
+.menu form { margin: 0; }
+.signed-in { font-size: .85rem; margin-top: .5rem; }
+/* A form button that reads as a link, for actions like Sign out. */
+button.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 650;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- upcoming ---------------------------------------------------------------
+   One row per day: date, a bar of everyone's answers (one equal segment per
+   member, so no inline widths), my status, and a padlock if booked. */
+.upcoming { list-style: none; margin: 0 0 1rem; padding: 0; }
+/* Each month heading doubles as the column headings, laid out like a day
+   row so "Others" and "You" centre over their own columns. */
+.upcoming .month {
+  display: flex;
+  align-items: baseline;
+  gap: .6rem;
+  padding: 0 .6rem;
+  margin: 1.25rem 0 .4rem;
+  color: var(--muted);
+  font-size: .75rem;
+  font-weight: 750;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.upcoming .month:first-child { margin-top: .25rem; }
+.upcoming .month .up-date { font-size: inherit; color: var(--text); }
+.upcoming .month .bar-head { flex: 1; min-width: 0; text-align: center; }
+.upcoming .month .mine-head { width: 28px; flex: none; text-align: center; }
+.upcoming .month .lock-gap { height: auto; }
+.up-row {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  min-height: var(--tap);
+  padding: .35rem .6rem;
+  margin-bottom: 4px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 600;
+}
+.up-row.all { box-shadow: inset 0 0 0 2px var(--yes); }
+.up-row.locked { box-shadow: inset 0 0 0 2px var(--accent); }
+.up-date { width: 6.6rem; flex: none; white-space: nowrap; font-size: .95rem; }
+.up-date.today { color: var(--accent); font-weight: 800; }
+.bar { flex: 1; min-width: 0; display: flex; gap: 2px; height: 14px; }
+.bar i { flex: 1; border-radius: 4px; }
+.seg-yes { background: var(--yes); }
+.seg-ok { background: var(--ok); }
+.seg-no { background: var(--no); }
+.seg-unknown { background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--unknown); }
+.up-mine .status { width: 28px; height: 28px; display: block; }
+.up-row .lock-icon, .lock-gap { width: 28px; height: 28px; flex: none; }
+.legend { white-space: nowrap; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin: 0 .2rem 0 .5rem; vertical-align: -1px; }
+
 /* ---- style page ----------------------------------------------------------- */
 .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: 8px; margin-bottom: 1rem; }
 .swatch { border-radius: var(--radius); background: var(--surface); padding: .5rem; font-size: .8rem; }
@@ -318,3 +512,16 @@ input:focus-visible, select:focus-visible { outline: none; border-color: var(--a
 .sw-unknown { background: var(--unknown); }
 .type-sample { margin: 0 0 .5rem; }
 .w400 { font-weight: 400; } .w500 { font-weight: 500; } .w600 { font-weight: 600; } .w700 { font-weight: 700; } .w800 { font-weight: 800; }
+
+/* ---- footer source link ----------------------------------------------------- */
+footer .source { display: flex; padding: 10px; margin: -10px; color: var(--muted); }
+footer .source:hover, footer .source:focus-visible { color: var(--text); }
+.github-icon { width: 22px; height: 22px; fill: currentColor; }
+
+/* ---- privacy and terms ------------------------------------------------------ */
+.legal ul { padding-left: 1.2rem; margin: 0 0 1rem; }
+.legal li + li { margin-top: .5rem; }
+.legal-links { font-size: .85rem; margin-top: 1rem; }
+
+.signed-in .me { color: var(--text); font-weight: 650; }
+.signed-in a { margin-left: .35rem; font-size: .8rem; }

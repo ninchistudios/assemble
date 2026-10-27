@@ -1,0 +1,17 @@
+{{define "profile.html"}}{{template "top" .}}
+<h2>Profile</h2>
+{{if .Saved}}<div class="notice ok">Saved.</div>{{end}}
+{{if .Error}}<div class="notice error">{{.Error}}</div>{{end}}
+<form method="post" action="/profile">
+<div class="field"><label for="display_name">Name shown to the group</label>
+<input id="display_name" name="display_name" type="text" maxlength="{{.MaxDisplayName}}" value="{{.User.DisplayName}}" placeholder="{{.User.GoogleName}}" autocomplete="nickname">
+<p class="hint">Leave empty to use your Google name, <b>{{.User.GoogleName}}</b>.</p></div>
+<button class="btn" type="submit">Save</button>
+</form>
+<h3>Account</h3>
+<ul class="rows">
+<li><span class="grow">Google account<span class="meta">{{.User.Email}}</span></span>{{if .User.IsAdmin}}<span class="tag">admin</span>{{end}}</li>
+</ul>
+<nav class="menu"><a href="/">Today</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a>
+<form method="post" action="/auth/logout"><button type="submit" class="link">Sign out</button></form></nav>
+{{template "bottom" .}}{{end}}

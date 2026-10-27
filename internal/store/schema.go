@@ -61,4 +61,54 @@ CREATE INDEX sessions_user ON sessions(user_id);
 ALTER TABLE settings ADD COLUMN admin_email TEXT;
 ALTER TABLE settings ADD COLUMN admin_sub   TEXT;
 `,
+
+	// 3: the 2026.2 calendar. Days are YYYY-MM-DD in the group timezone,
+	// never instants; see docs/calendar.md. Also the member's own choice of
+	// display name (#14), kept apart from the name Google reports so a
+	// sign-in never overwrites it.
+	`
+ALTER TABLE users ADD COLUMN display_name TEXT;
+
+-- One row per member per day they have answered. No row is [?].
+CREATE TABLE availability (
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  day        TEXT    NOT NULL,
+  status     TEXT    NOT NULL CHECK (status IN ('yes', 'ok', 'no')),
+  note       TEXT    NOT NULL DEFAULT '',  -- public, shown to the group (#15)
+  updated_at TEXT    NOT NULL,
+  PRIMARY KEY (user_id, day)
+);
+CREATE INDEX availability_day ON availability(day);
+
+-- A locked-in day has a row; cancelling deletes it. The notification
+-- records that it happened.
+CREATE TABLE lockins (
+  day       TEXT    PRIMARY KEY,
+  locked_by INTEGER NOT NULL REFERENCES users(id),
+  locked_at TEXT    NOT NULL,
+  override  INTEGER NOT NULL DEFAULT 0 CHECK (override IN (0, 1))
+);
+
+CREATE TABLE notifications (
+  id         INTEGER PRIMARY KEY,
+  kind       TEXT    NOT NULL CHECK (kind IN ('locked', 'cancelled')),
+  day        TEXT    NOT NULL,
+  actor_id   INTEGER REFERENCES users(id),
+  created_at TEXT    NOT NULL
+);
+CREATE INDEX notifications_day ON notifications(day);
+
+-- Dismissal is per person: one row each time someone taps it away.
+CREATE TABLE dismissals (
+  notification_id INTEGER NOT NULL REFERENCES notifications(id) ON DELETE CASCADE,
+  user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  PRIMARY KEY (notification_id, user_id)
+);
+`,
+
+	// 4: the admin's language filter (#33): comma-separated words or phrases
+	// that are blocked in new text and masked wherever text is shown.
+	`
+ALTER TABLE settings ADD COLUMN banned_words TEXT NOT NULL DEFAULT '';
+`,
 }

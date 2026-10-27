@@ -1,0 +1,50 @@
+{{define "day.html"}}{{template "top" .}}
+{{with .DayView}}
+<div class="day-head">
+<a class="day-step" href="/day/{{.Prev}}" rel="prev" aria-label="Previous day">‹</a>
+<div class="day-title">
+<h2>{{.Label}}</h2>
+{{if .IsToday}}<span class="tag">today</span>{{else if .Past}}<span class="tag">past</span>{{end}}
+</div>
+{{if .Next}}<a class="day-step" href="/day/{{.Next}}" rel="next" aria-label="Next day">›</a>{{else}}<span class="day-step" aria-hidden="true"></span>{{end}}
+</div>
+
+{{if .Locked}}<div class="lock-banner">{{template "lock-icon"}}<span><b>Locked in.</b> The group is meeting{{if .LockedOverride}}, though not everyone said they could{{end}}.</span></div>{{end}}
+
+<h3 class="sr-only">My availability</h3>
+<form class="picker" method="post" action="/day/{{.Day}}/status"{{if not .Editable}} aria-disabled="true"{{end}}>
+{{range .Picks}}<button class="pick" type="submit" name="status" value="{{.Value}}" aria-pressed="{{.Selected}}"{{if not $.DayView.Editable}} disabled{{end}}>
+<span class="on">{{template "status" .Icon}}</span><span class="off">{{template "status-off" .Icon}}</span>
+<span class="pick-label">{{.Label}}</span>
+</button>{{end}}
+</form>
+{{if .Past}}<p class="muted">This day has passed, so it can't be changed.</p>{{end}}
+{{if .Editable}}<form class="note-form" method="post" action="/day/{{.Day}}/note"{{if not .Mine}} hidden{{end}}>
+<label class="sr-only" for="note">Note for the group</label>
+<input id="note" name="note" type="text" maxlength="{{.MaxNote}}" value="{{.MyNote}}" placeholder="Add a note for the group" autocomplete="off">
+<button class="btn btn-quiet btn-small" type="submit">Save</button>
+</form>{{end}}
+<p class="picker-error notice error" role="alert" hidden></p>
+
+<h3>The group <span class="summary muted">{{.Summary}}</span></h3>
+<ul class="rows group">
+{{range .Group}}<li{{if .Me}} data-me{{end}} data-status="{{.Status.Icon}}"><span class="mini">{{template "status" .Status.Icon}}</span><span class="grow">{{.Name}}{{if .Me}} <span class="muted">(you)</span>{{end}}<span class="meta note">{{.Note}}</span></span><span class="status-word">{{.Status.Label}}</span></li>
+{{end}}</ul>
+{{range $.StatusIcons}}<template id="icon-{{.}}">{{template "status" .}}</template>{{end}}
+
+{{if .CanLock}}<form method="post" action="/day/{{.Day}}/lock"{{if .Unavailable}} data-confirm="Not everyone can make it: {{.Unavailable}}. Lock in anyway?" data-override{{end}}>
+<button class="btn" type="submit">Lock in this day</button>
+</form>{{end}}
+{{if .CanCancel}}<form method="post" action="/day/{{.Day}}/cancel" data-confirm="Cancel the locked-in session on {{.Label}}? Everyone will be notified.">
+<button class="btn btn-danger" type="submit">Cancel the locked-in session</button>
+</form>{{end}}
+<a class="btn btn-secondary" href="/upcoming">Upcoming</a>
+{{end}}
+
+<nav class="menu">
+{{if .User.IsAdmin}}<a href="/admin">Admin</a>{{end}}
+<form method="post" action="/auth/logout"><button type="submit" class="link">Sign out</button></form>
+</nav>
+<p class="muted signed-in">Signed in as <span class="me">{{.User.Name}}</span> <a href="/profile">change display name</a></p>
+<script src="/static/day.js" defer></script>
+{{template "bottom" .}}{{end}}

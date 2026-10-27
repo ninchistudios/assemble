@@ -27,10 +27,11 @@ func (s *Server) handleMembers(w http.ResponseWriter, r *http.Request, u *store.
 		return
 	}
 	loc := s.groupLocation()
+	f := s.filter()
 	rows := make([]memberRow, 0, len(users))
 	for _, m := range users {
 		rows = append(rows, memberRow{
-			ID: m.ID, Name: m.Name, Email: m.Email,
+			ID: m.ID, Name: f.Mask(m.Name), Email: m.Email,
 			Joined: shortDate(m.CreatedAt, loc),
 			Admin:  m.IsAdmin(), Enabled: m.Enabled, You: m.ID == u.ID,
 		})

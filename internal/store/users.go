@@ -16,28 +16,35 @@ type User struct {
 	ID        int64
 	Sub       string
 	Email     string
-	Name      string
+	Name      string // what the group sees: DisplayName if set, else GoogleName
 	Role      string
 	Enabled   bool
 	InviteID  int64 // 0 for the bootstrap admin
 	CreatedAt time.Time
+
+	GoogleName  string // as Google reported it at the last sign-in
+	DisplayName string // the member's own choice; empty if none
 }
 
 func (u User) IsAdmin() bool { return u.Role == RoleAdmin }
 
-const userCols = `id, sub, email, name, role, enabled, COALESCE(invite_id, 0), created_at`
+const userCols = `id, sub, email, name, COALESCE(display_name, ''), role, enabled, COALESCE(invite_id, 0), created_at`
 
 type scanner interface{ Scan(...any) error }
 
 func scanUser(row scanner) (User, error) {
 	var u User
 	var created string
-	err := row.Scan(&u.ID, &u.Sub, &u.Email, &u.Name, &u.Role, &u.Enabled, &u.InviteID, &created)
+	err := row.Scan(&u.ID, &u.Sub, &u.Email, &u.GoogleName, &u.DisplayName, &u.Role, &u.Enabled, &u.InviteID, &created)
 	if errors.Is(err, sql.ErrNoRows) {
 		return User{}, ErrNotFound
 	}
 	if err != nil {
 		return User{}, err
+	}
+	u.Name = u.GoogleName
+	if u.DisplayName != "" {
+		u.Name = u.DisplayName
 	}
 	u.CreatedAt, err = parseStamp(created)
 	return u, err
@@ -98,7 +105,22 @@ func (s *Store) Users() ([]User, error) {
 	return out, rows.Err()
 }
 
-// UpdateProfile refreshes the display details Google reported at sign-in.
+// MaxDisplayName keeps a chosen name to something that fits a row on a phone.
+const MaxDisplayName = 40
+
+// SetDisplayName sets the name a member chose to be shown by. Empty goes
+// back to the name from Google.
+func (s *Store) SetDisplayName(id int64, name string) error {
+	var v any
+	if name != "" {
+		v = name
+	}
+	_, err := s.db.Exec(`UPDATE users SET display_name = ? WHERE id = ?`, v, id)
+	return err
+}
+
+// UpdateProfile refreshes the details Google reported at sign-in. It never
+// touches a display name the member chose.
 func (s *Store) UpdateProfile(id int64, email, name string) error {
 	_, err := s.db.Exec(`UPDATE users SET email = ?, name = ? WHERE id = ?`, email, name, id)
 	return err

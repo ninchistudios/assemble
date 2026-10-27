@@ -12,7 +12,7 @@ func TestSettingsDefaultsThenSave(t *testing.T) {
 		t.Errorf("default settings = %+v", st)
 	}
 
-	want := Settings{GroupName: "The Band", SlotStart: "20:00", SlotEnd: "23:30", Timezone: "Australia/Brisbane"}
+	want := Settings{GroupName: "The Band", SlotStart: "20:00", SlotEnd: "23:30", Timezone: "Australia/Brisbane", BannedWords: "darn, heck"}
 	if err := s.SaveSettings(want, t0); err != nil {
 		t.Fatal(err)
 	}
@@ -21,7 +21,7 @@ func TestSettingsDefaultsThenSave(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got.GroupName != want.GroupName || got.SlotStart != want.SlotStart || got.SlotEnd != want.SlotEnd ||
-		got.Timezone != want.Timezone || !got.UpdatedAt.Equal(t0) {
+		got.Timezone != want.Timezone || got.BannedWords != want.BannedWords || !got.UpdatedAt.Equal(t0) {
 		t.Errorf("saved settings = %+v", got)
 	}
 }

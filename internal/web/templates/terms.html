@@ -1,0 +1,23 @@
+{{define "terms.html"}}{{template "top" .}}
+<article class="legal">
+<h2>Terms</h2>
+<p>{{.Group.GroupName}} uses <i>assemble</i> to find days the group can meet. This copy is run by the group's admin, for the group.</p>
+
+<h3>Using it</h3>
+<ul>
+<li>You can join only through an invite link from the admin, using your own Google account.</li>
+<li>Your availability and notes are seen by the whole group, so keep them suitable for that.</li>
+<li>The admin can lock in and cancel days, and can turn anyone's access off or back on.</li>
+</ul>
+
+<h3>No guarantees</h3>
+<p>This is a small, self-hosted tool, provided as is. It may be unavailable at times, may change, or may stop altogether. Don't rely on it as the only record of anything important. The software is open source under the <a href="https://github.com/ninchistudios/assemble/blob/main/LICENSE" rel="noopener noreferrer">MIT licence</a>, which applies to the software itself and excludes any warranty.</p>
+
+<h3>Your information</h3>
+<p>What's stored and who sees it is on the <a href="/privacy">privacy page</a>.</p>
+
+<h3>Questions</h3>
+<p>Ask your group's admin, who runs this copy.</p>
+</article>
+<nav class="menu"><a href="/">Back</a><a href="/privacy">Privacy</a></nav>
+{{template "bottom" .}}{{end}}

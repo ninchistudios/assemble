@@ -1,0 +1,14 @@
+{{define "upcoming.html"}}{{template "top" .}}
+<h2>Upcoming</h2>
+<p class="muted">The next two months. <span class="legend"><i class="seg-yes"></i>yes <i class="seg-ok"></i>ok <i class="seg-no"></i>no <i class="seg-unknown"></i>?</span></p>
+<ul class="upcoming">
+{{range .Upcoming}}{{if .Month}}<li class="month"><span class="up-date">{{.Month}}</span><span class="bar-head" aria-hidden="true">Others</span><span class="mine-head" aria-hidden="true">You</span><span class="lock-gap"></span></li>{{end}}<li>
+<a class="up-row{{if .Locked}} locked{{else if .AllAvailable}} all{{end}}" href="/day/{{.Day}}">
+<span class="up-date{{if .IsToday}} today{{end}}">{{.Short}}{{if .IsToday}}<span class="sr-only"> (today)</span>{{end}}</span>
+<span class="bar" role="img" aria-label="{{index .Counts 0}} yes, {{index .Counts 1}} ok, {{index .Counts 2}} no, {{index .Counts 3}} not answered">{{range .Segments}}<i class="seg-{{.}}"></i>{{end}}</span>
+<span class="up-mine">{{template "status" .Mine.Icon}}<span class="sr-only">You: {{.Mine.Label}}</span></span>
+{{if .Locked}}{{template "lock-icon"}}<span class="sr-only">Locked in</span>{{else}}<span class="lock-gap"></span>{{end}}
+</a></li>
+{{end}}</ul>
+<nav class="menu"><a href="/">Today</a></nav>
+{{template "bottom" .}}{{end}}
