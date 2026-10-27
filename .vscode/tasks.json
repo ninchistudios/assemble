@@ -1,0 +1,22 @@
+{
+  // Run assemble locally on loopback only. Binding 127.0.0.1 rather than the
+  // default :8080 (all interfaces) keeps it off the LAN and stops the Windows
+  // firewall asking for network access on every rebuild.
+  // Port 8138 matches the local Google redirect URI in docs/deployment.md.
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "assemble: run local",
+      "type": "shell",
+      "command": "go run .",
+      "options": {
+        "env": {
+          "ASSEMBLE_LISTEN": "127.0.0.1:8138",
+          "ASSEMBLE_BASE_URL": "http://localhost:8138"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    }
+  ]
+}
