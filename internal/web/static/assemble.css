@@ -1,0 +1,16 @@
+/* assemble - phone-first, no external assets. Placeholder until the visual
+   style lands (#12). */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0 auto;
+  max-width: 40rem;
+  padding: 1rem;
+  font-family: system-ui, sans-serif;
+  color-scheme: dark;
+  background: #16181d;
+  color: #ece8e1;
+}
+
+footer { color: #9a9fa8; font-size: .8rem; }

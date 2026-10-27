@@ -1,0 +1,27 @@
+# Copy to docker-compose.yml (gitignored) and adjust.
+services:
+  assemble:
+    image: ghcr.io/ninchistudios/assemble:main
+    container_name: assemble
+    restart: unless-stopped
+    env_file: .env
+    # The database lives on a volume, never in the image. Without this every
+    # redeploy silently starts from an empty database.
+    volumes:
+      - assemble-data:/data
+    # No host port is published. Put this container and your reverse proxy on
+    # a shared docker network and let the proxy reach it by name on port 8080.
+    #
+    # Only if the proxy runs OUTSIDE docker, or for local testing, publish a
+    # loopback port. Never publish on 0.0.0.0, and avoid host port 8080:
+    # sharing an origin with another local app means sharing its cookie jar.
+    # ports:
+    #   - "127.0.0.1:8138:8080"
+    healthcheck:
+      test: ["CMD", "/assemble", "-healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  assemble-data:

@@ -1,0 +1,23 @@
+{{define "top"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>assemble{{if .Title}}: {{.Title}}{{end}}</title>
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/assemble.css">
+</head>
+<body>
+<header>
+<h1>assemble</h1>
+</header>
+<main>
+{{end}}
+
+{{define "bottom"}}
+</main>
+<footer>{{.Version}}</footer>
+</body>
+</html>
+{{end}}

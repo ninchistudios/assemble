@@ -1,0 +1,7 @@
+.git
+.github
+*.md
+local-private
+.env
+.env.*
+data/
