@@ -71,6 +71,9 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /admin/invites", s.requireAdmin(s.handleInvites))
 	s.mux.HandleFunc("POST /admin/invites", s.requireAdmin(s.handleInviteCreate))
 	s.mux.HandleFunc("POST /admin/invites/{id}/disable", s.requireAdmin(s.handleInviteDisable))
+	s.mux.HandleFunc("GET /admin/members", s.requireAdmin(s.handleMembers))
+	s.mux.HandleFunc("POST /admin/members/{id}/disable", s.requireAdmin(s.handleMemberAccess(false)))
+	s.mux.HandleFunc("POST /admin/members/{id}/enable", s.requireAdmin(s.handleMemberAccess(true)))
 
 	// Sign-in flow.
 	s.mux.HandleFunc("GET /auth/login", s.handleLogin)
@@ -119,6 +122,7 @@ type page struct {
 	Zones   []string
 	Saved   bool
 	Invites []inviteRow
+	Members []memberRow
 
 	DevBypass bool
 	Email     string // the account that was refused, on the denied page

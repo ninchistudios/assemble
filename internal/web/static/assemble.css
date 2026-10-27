@@ -157,6 +157,8 @@ a { color: var(--accent); font-weight: 650; text-decoration-thickness: 2px; text
 }
 .btn-danger { background: var(--danger); color: var(--on-danger); }
 .btn + .btn, .btn + form, form + .btn, form + form { margin-top: .75rem; }
+/* Row actions: still a 40px target, but sized to the label. */
+.btn-small { width: auto; min-width: 0; min-height: 40px; padding: .4rem .8rem; font-size: .9rem; }
 form.inline { display: inline; }
 
 /* ---- forms ---------------------------------------------------------------- */
@@ -230,6 +232,10 @@ input:focus-visible, select:focus-visible { outline: none; border-color: var(--a
 .invite .actions > * { flex: 1; margin: 0; }
 .invite .actions .btn { width: 100%; min-width: 0; padding: .5rem; }
 .invite.off { color: var(--muted); }
+.member { flex-wrap: wrap; }
+.member.off .grow { color: var(--muted); }
+.member form { margin: 0; }
+
 /* A quiet button on a row would vanish into it; lift it one step. */
 .rows .btn-quiet { background: var(--surface-2); }
 

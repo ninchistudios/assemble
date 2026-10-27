@@ -80,6 +80,24 @@ func (s *Store) CreateUser(sub, email, name, role string, inviteID int64, now ti
 	return s.UserByID(id)
 }
 
+// Users lists everyone: admins first, then by when they joined.
+func (s *Store) Users() ([]User, error) {
+	rows, err := s.db.Query(`SELECT ` + userCols + ` FROM users ORDER BY role = 'admin' DESC, created_at, id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []User
+	for rows.Next() {
+		u, err := scanUser(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, u)
+	}
+	return out, rows.Err()
+}
+
 // UpdateProfile refreshes the display details Google reported at sign-in.
 func (s *Store) UpdateProfile(id int64, email, name string) error {
 	_, err := s.db.Exec(`UPDATE users SET email = ?, name = ? WHERE id = ?`, email, name, id)

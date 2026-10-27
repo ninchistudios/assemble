@@ -1,4 +1,5 @@
-// Invite page enhancements: copy, share and a confirm before disabling.
+// Admin page enhancements: copy and share for invite links, and a confirm
+// before anything is disabled.
 // Without JS the link is still selectable in its field and disabling still
 // works, just without the confirm.
 "use strict";

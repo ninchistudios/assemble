@@ -70,12 +70,12 @@ func TestInvitesAreAdminOnly(t *testing.T) {
 	}
 }
 
-func TestInviteScriptServed(t *testing.T) {
-	rec := newEnv(t).get(t, "/static/invites.js")
+func TestAdminScriptServed(t *testing.T) {
+	rec := newEnv(t).get(t, "/static/admin.js")
 	// Go says text/javascript; on Windows the registry says
 	// application/javascript. Browsers run both under nosniff.
 	ct := rec.Header().Get("Content-Type")
 	if rec.Code != http.StatusOK || !(strings.HasPrefix(ct, "text/javascript") || strings.HasPrefix(ct, "application/javascript")) {
-		t.Errorf("invites.js = %d %s", rec.Code, rec.Header().Get("Content-Type"))
+		t.Errorf("admin.js = %d %s", rec.Code, rec.Header().Get("Content-Type"))
 	}
 }
