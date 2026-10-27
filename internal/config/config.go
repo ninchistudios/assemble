@@ -26,15 +26,16 @@ var (
 )
 
 // shortCommit is how many hex characters of the revision to show.
-const shortCommit = 7
+const shortCommit = 8
 
 // dirtyMark is appended to the revision when the build came from a working
 // tree with uncommitted changes. Without it the footer names a commit whose
 // contents are not what is actually running.
 const dirtyMark = "+"
 
-// VersionString is what the footer and /healthz show: "2026.1 a1b2c3d", or
-// "2026.1 a1b2c3d+" when built from a dirty tree.
+// VersionString is what the footer and /healthz show: "2026.1 build a1b2c3d4",
+// "2026.1 build a1b2c3d4+" when built from a dirty tree, or just "2026.1" when
+// the build does not know its commit.
 func VersionString() string {
 	c := Commit
 	if c == "" {
@@ -57,7 +58,7 @@ func formatVersion(version, commit string) string {
 	if dirty {
 		commit += dirtyMark
 	}
-	return version + " " + commit
+	return version + " build " + commit
 }
 
 // vcsRevision reads the revision the Go toolchain stamps into the binary,

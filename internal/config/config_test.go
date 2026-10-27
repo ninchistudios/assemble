@@ -5,9 +5,9 @@ import "testing"
 func TestFormatVersion(t *testing.T) {
 	for _, tc := range []struct{ version, commit, want string }{
 		{"2026.1", "", "2026.1"},
-		{"2026.1", "a1b2c3d4e5f6", "2026.1 a1b2c3d"},
-		{"2026.1", "a1b2c3d4e5f6+", "2026.1 a1b2c3d+"},
-		{"dev", "abc", "dev abc"},
+		{"2026.1", "a1b2c3d4e5f6", "2026.1 build a1b2c3d4"},
+		{"2026.1", "a1b2c3d4e5f6+", "2026.1 build a1b2c3d4+"},
+		{"dev", "abc", "dev build abc"},
 	} {
 		if got := formatVersion(tc.version, tc.commit); got != tc.want {
 			t.Errorf("formatVersion(%q, %q) = %q, want %q", tc.version, tc.commit, got, tc.want)

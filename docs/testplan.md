@@ -30,7 +30,7 @@ Follow the [README](../README.md#1-create-a-google-oauth-client) from scratch, w
 |---|---|---|
 | B1 | Follow README step 1 exactly as written | Every screen and label named in it exists. Note anything that differs. |
 | B2 | Check the consent screen's publishing status | **In production**. |
-| B3 | Open `https://YOUR-DOMAIN/healthz` | `ok 2026.1 <commit>`. |
+| B3 | Open `https://YOUR-DOMAIN/healthz` | `ok 2026.1 build <commit>`, the first 8 characters of the deployed commit. The page footer matches. |
 
 ## C. Admin sign-in
 

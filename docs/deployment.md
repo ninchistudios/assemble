@@ -82,7 +82,7 @@ For NPM, add a Proxy Host:
 - **Block Common Exploits:** on
 - **SSL:** request a Let's Encrypt certificate, then enable **Force SSL** and **HTTP/2**. HSTS is safe to enable.
 
-To check, open `https://YOUR-DOMAIN/healthz`. It should return `ok 2026.1 <commit>`.
+To check, open `https://YOUR-DOMAIN/healthz`. It should return `ok 2026.1 build <commit>`, the same version the page footer shows.
 
 ## First sign-in
 
@@ -139,7 +139,22 @@ docker build \
   -t assemble:local .
 ```
 
-The `VERSION` file at the repo root is the app version. A trailing `+` on the commit marks a build made from uncommitted changes.
+The `VERSION` file at the repo root is the app version. A trailing `+` on the commit marks a build made from uncommitted changes. The footer and `/healthz` show the first 8 characters, e.g. `2026.1 build 156fac22`.
+
+To build with Compose instead, replace `image:` with a `build:` section that passes the commit through:
+
+```yaml
+    build:
+      context: .
+      args:
+        VERSION: "2026.1"
+        COMMIT: ${ASSEMBLE_COMMIT:-}
+```
+
+```sh
+ASSEMBLE_COMMIT=$(git rev-parse HEAD) docker compose up -d --build              # bash
+$env:ASSEMBLE_COMMIT = git rev-parse HEAD; docker compose up -d --build         # PowerShell
+```
 
 ## Troubleshooting
 
