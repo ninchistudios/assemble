@@ -53,6 +53,10 @@
 
 * { box-sizing: border-box; }
 
+/* Components set their own display, which would otherwise beat the hidden
+   attribute that scripts use to reveal JS-only controls. */
+[hidden] { display: none !important; }
+
 html {
   background: var(--bg);
   color: var(--text);
@@ -211,6 +215,23 @@ input:focus-visible, select:focus-visible { outline: none; border-color: var(--a
   letter-spacing: .04em;
   text-transform: uppercase;
 }
+
+/* ---- invites ------------------------------------------------------------- */
+.invite { flex-wrap: wrap; }
+.invite input.link {
+  min-height: 40px;
+  padding: .4rem .6rem;
+  background: var(--bg);
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: .8rem;
+}
+.invite .meta { margin: .4rem 0 0; }
+.invite .actions { display: flex; gap: 8px; margin-top: .6rem; }
+.invite .actions > * { flex: 1; margin: 0; }
+.invite .actions .btn { width: 100%; min-width: 0; padding: .5rem; }
+.invite.off { color: var(--muted); }
+/* A quiet button on a row would vanish into it; lift it one step. */
+.rows .btn-quiet { background: var(--surface-2); }
 
 /* ---- tabs (admin sections) ----------------------------------------------- */
 .tabs { display: flex; gap: 6px; margin: 0 0 1.25rem; overflow-x: auto; }
