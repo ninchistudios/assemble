@@ -28,11 +28,12 @@ This runs a private instance on your own machine at `http://localhost:8138`, sig
 
 1. Open the [Google Cloud console](https://console.cloud.google.com/) and create a project. Any name will do, e.g. `assemble`.
 2. Go to **APIs & Services → OAuth consent screen**. On newer consoles this is labelled **Google Auth Platform**. Choose **Get started**, then:
-   - **App information:** fill in the app name (your group's name is a good choice) and your email as the support email.
+   - **App information:** set the app name to your group's name exactly as `assemble` shows it (the admin's Group setting), and your email as the support email. Google's brand check compares this name with your homepage.
    - **Audience:** choose **External**.
    - **Contact information:** your email.
    - Agree to the policy and create.
 3. **Branding:** under **App domain**, set the privacy policy link to `https://YOUR-DOMAIN/privacy` and the terms of service link to `https://YOUR-DOMAIN/terms`. `assemble` serves both pages without sign-in. They describe what the software stores; if you need wording specific to your group, take your own advice on it.
+   - Add your domain under **Authorised domains**. Google also requires the domain to be verified in [Search Console](https://search.google.com/search-console) by the Google account that owns this Cloud project. A **Domain** property verified by a DNS TXT record is the simplest route, and a domain can have several verified owners.
 4. **Audience → Publish app**, so that the publishing status reads **In production**.
    - This step matters. While the app is in **Testing**, only Google accounts you list by hand can sign in, so invite links fail for everyone else.
    - `assemble` asks only for the basic `openid`, `email` and `profile` scopes, so publishing needs no review from Google.
