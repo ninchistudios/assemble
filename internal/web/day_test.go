@@ -132,3 +132,30 @@ func TestTodayFollowsGroupTimezone(t *testing.T) {
 		t.Error("home isn't today in the group timezone")
 	}
 }
+
+func TestGroupStatusForADay(t *testing.T) {
+	e, admin := dayEnv(t)
+	jo, joC := e.memberSession(t, "jo")
+	sam, _ := e.memberSession(t, "sam")
+	gone, _ := e.memberSession(t, "gone")
+	e.do(t, http.MethodPost, "/day/2026-11-20/status", url.Values{"status": {"yes"}}, admin)
+	e.do(t, http.MethodPost, "/day/2026-11-20/status", url.Values{"status": {"no"}}, joC)
+	e.db.SetStatus(gone.ID, "2026-11-20", cal.Yes, fixedNow)
+	e.db.SetEnabled(gone.ID, false)
+
+	// Jo sees everyone enabled, Jo first, Sam as [?], and nothing of Gone.
+	body := e.get(t, "/day/2026-11-20", joC).Body.String()
+	if !strings.Contains(body, "1 yes · 0 ok · 1 no · 1 ?") {
+		t.Errorf("summary wrong:\n%s", body)
+	}
+	i := strings.Index
+	if !(i(body, jo.Name) < i(body, "Ada") && i(body, "Ada") < i(body, sam.Name)) {
+		t.Error("the viewer isn't listed first, or the others are out of join order")
+	}
+	if strings.Contains(body, gone.Name) {
+		t.Error("a disabled member is listed")
+	}
+	if !strings.Contains(body, `data-me data-status="no"`) {
+		t.Error("Jo's own row doesn't carry Jo's status")
+	}
+}

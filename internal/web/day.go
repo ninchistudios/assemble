@@ -2,6 +2,7 @@ package web
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -20,6 +21,52 @@ type dayView struct {
 	Prev     cal.Day
 	Next     cal.Day // empty at the horizon
 	Picks    []pick
+	Group    []memberStatus
+	Summary  string
+}
+
+// memberStatus is one enabled member's answer for the day.
+type memberStatus struct {
+	Name   string
+	Me     bool
+	Status cal.Status
+}
+
+// summarise counts statuses the way the page and its script both write
+// them: "3 yes · 1 ok · 1 no · 1 ?".
+func summarise(group []memberStatus) string {
+	n := map[cal.Status]int{}
+	for _, m := range group {
+		n[m.Status]++
+	}
+	return fmt.Sprintf("%d yes · %d ok · %d no · %d ?", n[cal.Yes], n[cal.OK], n[cal.No], n[cal.Unknown])
+}
+
+// groupFor lists every enabled member's status for d, me first, then in the
+// order people joined. Disabled members are left out entirely.
+func (s *Server) groupFor(me *store.User, d cal.Day) ([]memberStatus, error) {
+	users, err := s.db.Users()
+	if err != nil {
+		return nil, err
+	}
+	answers, err := s.db.Answers(d, d)
+	if err != nil {
+		return nil, err
+	}
+	var mine []memberStatus
+	var rest []memberStatus
+	for _, u := range users {
+		if !u.Enabled {
+			continue
+		}
+		m := memberStatus{Name: u.Name, Me: u.ID == me.ID, Status: answers[d][u.ID].Status}
+		if m.Me {
+			mine = append(mine, m)
+		} else {
+			rest = append(rest, m)
+		}
+	}
+	return append(mine, rest...), nil
 }
 
 // pick is one of the four status buttons.
@@ -64,10 +111,16 @@ func (s *Server) handleDay(w http.ResponseWriter, r *http.Request, u *store.User
 
 func (s *Server) showDay(w http.ResponseWriter, u *store.User, d cal.Day) {
 	today, win := s.today()
-	mine, err := s.db.Status(u.ID, d)
+	group, err := s.groupFor(u, d)
 	if err != nil {
 		s.fail(w, "Couldn't load that day.", err)
 		return
+	}
+	var mine cal.Status
+	for _, m := range group {
+		if m.Me {
+			mine = m.Status
+		}
 	}
 	v := dayView{
 		Day:      d,
@@ -76,6 +129,8 @@ func (s *Server) showDay(w http.ResponseWriter, u *store.User, d cal.Day) {
 		Editable: win.Editable(d),
 		Past:     win.Past(d),
 		Prev:     d.Add(-1),
+		Group:    group,
+		Summary:  summarise(group),
 	}
 	if !win.Beyond(d.Add(1)) {
 		v.Next = d.Add(1)
@@ -87,7 +142,8 @@ func (s *Server) showDay(w http.ResponseWriter, u *store.User, d cal.Day) {
 	if v.IsToday {
 		title = ""
 	}
-	s.render(w, http.StatusOK, "day.html", page{Title: title, User: u, DayView: &v})
+	s.render(w, http.StatusOK, "day.html", page{Title: title, User: u, DayView: &v,
+		StatusIcons: []string{"yes", "ok", "no", "unknown"}})
 }
 
 // handleSetStatus sets the signed-in member's status for a day. The day

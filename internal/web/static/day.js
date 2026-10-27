@@ -18,6 +18,26 @@ function select(value) {
   });
 }
 
+const labels = { yes: "YES", ok: "OK", no: "NO", unknown: "?" };
+
+// Mirror my saved status into my row of the group list, and recount the
+// summary the same way the server writes it.
+function showMine(value) {
+  const row = document.querySelector(".group li[data-me]");
+  if (row) {
+    row.dataset.status = value;
+    const icon = document.getElementById("icon-" + value);
+    if (icon) row.querySelector(".mini").replaceChildren(icon.content.cloneNode(true));
+    row.querySelector(".status-word").textContent = labels[value];
+  }
+  const counts = { yes: 0, ok: 0, no: 0, unknown: 0 };
+  document.querySelectorAll(".group li").forEach((li) => { counts[li.dataset.status]++; });
+  const summary = document.querySelector(".summary");
+  if (summary) {
+    summary.textContent = `${counts.yes} yes · ${counts.ok} ok · ${counts.no} no · ${counts.unknown} ?`;
+  }
+}
+
 if (picker && picker.getAttribute("aria-disabled") !== "true") {
   picker.addEventListener("click", async (e) => {
     const btn = e.target.closest("button.pick");
@@ -37,6 +57,7 @@ if (picker && picker.getAttribute("aria-disabled") !== "true") {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Couldn't save that. Please try again.");
       select(data.status);
+      showMine(data.status);
     } catch (err) {
       select(previous ? previous.value : "");
       showError(err.message);

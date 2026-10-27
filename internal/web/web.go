@@ -159,7 +159,8 @@ type page struct {
 	Invites []inviteRow
 	Members []memberRow
 
-	DayView *dayView
+	DayView     *dayView
+	StatusIcons []string // icon names, for the day page script to copy
 
 	DevBypass bool
 	Local     bool   // a test copy on this machine: the header says so

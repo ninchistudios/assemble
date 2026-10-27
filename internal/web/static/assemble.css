@@ -347,6 +347,11 @@ span.day-step { background: none; }
 .pick:disabled { cursor: default; opacity: .55; }
 .picker-error { margin-top: -.25rem; }
 
+.summary { display: block; font-size: .85rem; font-weight: 600; margin-top: .15rem; }
+.group .mini .status { width: 32px; height: 32px; }
+.group .status-word { color: var(--muted); font-size: .8rem; font-weight: 750; letter-spacing: .04em; }
+.group li[data-me] { box-shadow: inset 3px 0 0 var(--accent); }
+
 .menu { display: flex; gap: 1.25rem; align-items: center; margin-top: 2rem; }
 .menu form { margin: 0; }
 .signed-in { font-size: .85rem; margin-top: .5rem; }

@@ -18,6 +18,12 @@
 </form>
 {{if .Past}}<p class="muted">This day has passed, so it can't be changed.</p>{{end}}
 <p class="picker-error notice error" role="alert" hidden></p>
+
+<h3>The group <span class="summary muted">{{.Summary}}</span></h3>
+<ul class="rows group">
+{{range .Group}}<li{{if .Me}} data-me{{end}} data-status="{{.Status.Icon}}"><span class="mini">{{template "status" .Status.Icon}}</span><span class="grow">{{.Name}}{{if .Me}} <span class="muted">(you)</span>{{end}}</span><span class="status-word">{{.Status.Label}}</span></li>
+{{end}}</ul>
+{{range $.StatusIcons}}<template id="icon-{{.}}">{{template "status" .}}</template>{{end}}
 {{end}}
 
 <nav class="menu">
