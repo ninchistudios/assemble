@@ -11,6 +11,7 @@ import (
 	"net/http"
 
 	"github.com/ninchistudios/assemble/internal/config"
+	"github.com/ninchistudios/assemble/internal/store"
 )
 
 //go:embed templates/*.html
@@ -21,13 +22,14 @@ var staticFS embed.FS
 
 type Server struct {
 	cfg     config.Config
+	db      *store.Store
 	tpl     *template.Template
 	mux     *http.ServeMux
 	handler http.Handler
 	etags   map[string]string // /static/<file> -> content hash
 }
 
-func New(cfg config.Config) (*Server, error) {
+func New(cfg config.Config, db *store.Store) (*Server, error) {
 	tpl, err := template.ParseFS(templateFS, "templates/*.html")
 	if err != nil {
 		return nil, err
@@ -38,6 +40,7 @@ func New(cfg config.Config) (*Server, error) {
 	}
 	s := &Server{
 		cfg:   cfg,
+		db:    db,
 		tpl:   tpl,
 		mux:   http.NewServeMux(),
 		etags: etags,

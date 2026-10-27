@@ -3,10 +3,12 @@ package web
 import (
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/ninchistudios/assemble/internal/config"
+	"github.com/ninchistudios/assemble/internal/store"
 )
 
 func newServer(t *testing.T) *Server {
@@ -15,11 +17,21 @@ func newServer(t *testing.T) *Server {
 		Listen:  ":0",
 		BaseURL: "https://assemble.example.com",
 		Version: "vtest",
-	})
+	}, newStoreForWeb(t))
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
 	return s
+}
+
+func newStoreForWeb(t *testing.T) *store.Store {
+	t.Helper()
+	db, err := store.Open(filepath.Join(t.TempDir(), "web.db"))
+	if err != nil {
+		t.Fatalf("store.Open: %v", err)
+	}
+	t.Cleanup(func() { db.Close() })
+	return db
 }
 
 func get(t *testing.T, s *Server, path string) *httptest.ResponseRecorder {

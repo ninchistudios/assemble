@@ -9,6 +9,8 @@ services:
     # redeploy silently starts from an empty database.
     volumes:
       - assemble-data:/data
+    environment:
+      ASSEMBLE_DB_PATH: /data/assemble.db
     # No host port is published. Put this container and your reverse proxy on
     # a shared docker network and let the proxy reach it by name on port 8080.
     #

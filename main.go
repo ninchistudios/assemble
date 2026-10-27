@@ -17,6 +17,7 @@ import (
 	_ "time/tzdata"
 
 	"github.com/ninchistudios/assemble/internal/config"
+	"github.com/ninchistudios/assemble/internal/store"
 	"github.com/ninchistudios/assemble/internal/web"
 )
 
@@ -36,7 +37,13 @@ func main() {
 		log.Fatalf("config: %v", err)
 	}
 
-	handler, err := web.New(cfg)
+	db, err := store.Open(cfg.DBPath)
+	if err != nil {
+		log.Fatalf("store: %v", err)
+	}
+	defer db.Close()
+
+	handler, err := web.New(cfg, db)
 	if err != nil {
 		log.Fatalf("init: %v", err)
 	}

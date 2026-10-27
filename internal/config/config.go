@@ -87,6 +87,11 @@ type Config struct {
 	Listen  string
 	BaseURL string // public origin, e.g. https://assemble.example.com. No trailing slash.
 	Version string
+
+	// DBPath is the SQLite file. The default is relative so a local build
+	// works with no configuration; in the container it is an absolute path on
+	// a mounted volume, because the database must never live in the image.
+	DBPath string
 }
 
 func Load() (Config, error) {
@@ -94,6 +99,7 @@ func Load() (Config, error) {
 		Listen:  envOr("ASSEMBLE_LISTEN", ":8080"),
 		BaseURL: strings.TrimRight(os.Getenv("ASSEMBLE_BASE_URL"), "/"),
 		Version: VersionString(),
+		DBPath:  envOr("ASSEMBLE_DB_PATH", "data/assemble.db"),
 	}
 
 	var missing []string
