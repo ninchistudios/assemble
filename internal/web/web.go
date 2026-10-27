@@ -99,6 +99,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /{$}", s.requireUser(s.handleToday))
 	s.mux.HandleFunc("GET /day/{date}", s.requireUser(s.handleDay))
 	s.mux.HandleFunc("POST /day/{date}/status", s.requireUser(s.handleSetStatus))
+	s.mux.HandleFunc("POST /day/{date}/note", s.requireUser(s.handleSetNote))
 	s.mux.HandleFunc("GET /style", s.requireAdmin(s.handleStyle))
 
 	// Admin.

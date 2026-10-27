@@ -2,10 +2,12 @@ package web
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/ninchistudios/assemble/internal/cal"
 	"github.com/ninchistudios/assemble/internal/store"
@@ -23,6 +25,9 @@ type dayView struct {
 	Picks    []pick
 	Group    []memberStatus
 	Summary  string
+	Mine     cal.Status
+	MyNote   string
+	MaxNote  int
 }
 
 // memberStatus is one enabled member's answer for the day.
@@ -30,6 +35,7 @@ type memberStatus struct {
 	Name   string
 	Me     bool
 	Status cal.Status
+	Note   string
 }
 
 // summarise counts statuses the way the page and its script both write
@@ -59,7 +65,8 @@ func (s *Server) groupFor(me *store.User, d cal.Day) ([]memberStatus, error) {
 		if !u.Enabled {
 			continue
 		}
-		m := memberStatus{Name: u.Name, Me: u.ID == me.ID, Status: answers[d][u.ID].Status}
+		a := answers[d][u.ID]
+		m := memberStatus{Name: u.Name, Me: u.ID == me.ID, Status: a.Status, Note: a.Note}
 		if m.Me {
 			mine = append(mine, m)
 		} else {
@@ -117,9 +124,10 @@ func (s *Server) showDay(w http.ResponseWriter, u *store.User, d cal.Day) {
 		return
 	}
 	var mine cal.Status
+	var myNote string
 	for _, m := range group {
 		if m.Me {
-			mine = m.Status
+			mine, myNote = m.Status, m.Note
 		}
 	}
 	v := dayView{
@@ -131,6 +139,9 @@ func (s *Server) showDay(w http.ResponseWriter, u *store.User, d cal.Day) {
 		Prev:     d.Add(-1),
 		Group:    group,
 		Summary:  summarise(group),
+		Mine:     mine,
+		MyNote:   myNote,
+		MaxNote:  store.MaxNote,
 	}
 	if !win.Beyond(d.Add(1)) {
 		v.Next = d.Add(1)
@@ -170,6 +181,40 @@ func (s *Server) handleSetStatus(w http.ResponseWriter, r *http.Request, u *stor
 	}
 	if wantsJSON(r) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": st.Icon()})
+		return
+	}
+	http.Redirect(w, r, dayPath(d), http.StatusSeeOther)
+}
+
+// handleSetNote sets the signed-in member's public note for a day. Like
+// handleSetStatus, it answers the script with JSON and a plain form with a
+// redirect.
+func (s *Server) handleSetNote(w http.ResponseWriter, r *http.Request, u *store.User) {
+	d, ok := s.dayFromPath(w, r)
+	if !ok {
+		return
+	}
+	note := strings.Join(strings.Fields(r.FormValue("note")), " ")
+	if utf8.RuneCountInString(note) > store.MaxNote {
+		s.answer(w, r, d, http.StatusBadRequest, fmt.Sprintf("Keep the note to %d characters or fewer.", store.MaxNote))
+		return
+	}
+	if _, win := s.today(); !win.Editable(d) {
+		s.answer(w, r, d, http.StatusConflict, "This day has passed, so it can't be changed.")
+		return
+	}
+	err := s.db.SetNote(u.ID, d, note, s.now())
+	if errors.Is(err, store.ErrNotFound) {
+		s.answer(w, r, d, http.StatusConflict, "Set your status first: a note goes with your answer.")
+		return
+	}
+	if err != nil {
+		log.Printf("set note user=%d day=%s: %v", u.ID, d, err)
+		s.answer(w, r, d, http.StatusInternalServerError, "Couldn't save that. Please try again.")
+		return
+	}
+	if wantsJSON(r) {
+		writeJSON(w, http.StatusOK, map[string]string{"note": note})
 		return
 	}
 	http.Redirect(w, r, dayPath(d), http.StatusSeeOther)

@@ -17,11 +17,16 @@
 </button>{{end}}
 </form>
 {{if .Past}}<p class="muted">This day has passed, so it can't be changed.</p>{{end}}
+{{if .Editable}}<form class="note-form" method="post" action="/day/{{.Day}}/note"{{if not .Mine}} hidden{{end}}>
+<label class="sr-only" for="note">Note for the group</label>
+<input id="note" name="note" type="text" maxlength="{{.MaxNote}}" value="{{.MyNote}}" placeholder="Add a note for the group" autocomplete="off">
+<button class="btn btn-quiet btn-small" type="submit">Save</button>
+</form>{{end}}
 <p class="picker-error notice error" role="alert" hidden></p>
 
 <h3>The group <span class="summary muted">{{.Summary}}</span></h3>
 <ul class="rows group">
-{{range .Group}}<li{{if .Me}} data-me{{end}} data-status="{{.Status.Icon}}"><span class="mini">{{template "status" .Status.Icon}}</span><span class="grow">{{.Name}}{{if .Me}} <span class="muted">(you)</span>{{end}}</span><span class="status-word">{{.Status.Label}}</span></li>
+{{range .Group}}<li{{if .Me}} data-me{{end}} data-status="{{.Status.Icon}}"><span class="mini">{{template "status" .Status.Icon}}</span><span class="grow">{{.Name}}{{if .Me}} <span class="muted">(you)</span>{{end}}<span class="meta note">{{.Note}}</span></span><span class="status-word">{{.Status.Label}}</span></li>
 {{end}}</ul>
 {{range $.StatusIcons}}<template id="icon-{{.}}">{{template "status" .}}</template>{{end}}
 {{end}}

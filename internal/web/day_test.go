@@ -159,3 +159,34 @@ func TestGroupStatusForADay(t *testing.T) {
 		t.Error("Jo's own row doesn't carry Jo's status")
 	}
 }
+
+func TestNotes(t *testing.T) {
+	e, admin := dayEnv(t)
+	_, jo := e.memberSession(t, "jo")
+	note := func(c *http.Cookie, day, text string) int {
+		return e.do(t, http.MethodPost, "/day/"+day+"/note", url.Values{"note": {text}}, c).Code
+	}
+
+	if code := note(jo, "2026-11-20", "late"); code != http.StatusConflict {
+		t.Errorf("note before a status = %d, want 409", code)
+	}
+	e.do(t, http.MethodPost, "/day/2026-11-20/status", url.Values{"status": {"ok"}}, jo)
+	if code := note(jo, "2026-11-20", "  not until   8pm <b>sorry</b> "); code != http.StatusSeeOther {
+		t.Fatalf("note = %d", code)
+	}
+	body := e.get(t, "/day/2026-11-20", admin).Body.String()
+	if !strings.Contains(body, "not until 8pm &lt;b&gt;sorry&lt;/b&gt;") {
+		t.Error("the group doesn't see the note, tidied and escaped")
+	}
+	if code := note(jo, "2026-11-20", strings.Repeat("x", 141)); code != http.StatusBadRequest {
+		t.Errorf("overlong note = %d, want 400", code)
+	}
+	if code := note(jo, "2026-11-13", "too late"); code != http.StatusConflict {
+		t.Errorf("note on a past day = %d, want 409", code)
+	}
+
+	// The note field is offered only once there's an answer.
+	if body := e.get(t, "/day/2026-11-21", jo).Body.String(); !strings.Contains(body, `class="note-form" method="post" action="/day/2026-11-21/note" hidden`) {
+		t.Error("note field shown before any answer")
+	}
+}

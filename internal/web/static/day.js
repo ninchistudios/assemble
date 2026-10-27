@@ -58,8 +58,44 @@ if (picker && picker.getAttribute("aria-disabled") !== "true") {
       if (!res.ok) throw new Error(data.error || "Couldn't save that. Please try again.");
       select(data.status);
       showMine(data.status);
+      // A note goes with an answer: offered once there is one, and gone
+      // (the server deletes it) when the status goes back to [?].
+      if (noteForm) {
+        noteForm.hidden = data.status === "unknown";
+        if (data.status === "unknown") { noteForm.note.value = ""; showMyNote(""); }
+      }
     } catch (err) {
       select(previous ? previous.value : "");
+      showError(err.message);
+    }
+  });
+}
+
+const noteForm = document.querySelector("form.note-form");
+
+function showMyNote(text) {
+  const note = document.querySelector(".group li[data-me] .note");
+  if (note) note.textContent = text;
+}
+
+if (noteForm) {
+  noteForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = noteForm.querySelector("button");
+    showError("");
+    try {
+      const res = await fetch(noteForm.action, {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        body: new URLSearchParams({ note: noteForm.note.value }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Couldn't save that. Please try again.");
+      noteForm.note.value = data.note;
+      showMyNote(data.note);
+      btn.textContent = "Saved";
+      setTimeout(() => { btn.textContent = "Save"; }, 1500);
+    } catch (err) {
       showError(err.message);
     }
   });

@@ -71,3 +71,24 @@ func (s *Store) Answers(first, last cal.Day) (map[cal.Day]map[int64]Answer, erro
 	}
 	return out, rows.Err()
 }
+
+// MaxNote is the longest note a member can leave on a day: a line, not a
+// message thread.
+const MaxNote = 140
+
+// SetNote sets a member's public note for a day. A note belongs to an
+// answer, so a member who hasn't answered (or has gone back to [?]) gets
+// ErrNotFound.
+func (s *Store) SetNote(userID int64, day cal.Day, note string, now time.Time) error {
+	res, err := s.db.Exec(`UPDATE availability SET note = ?, updated_at = ? WHERE user_id = ? AND day = ?`,
+		note, Stamp(now), userID, day)
+	if err != nil {
+		return fmt.Errorf("set note: %w", err)
+	}
+	if n, err := res.RowsAffected(); err != nil {
+		return err
+	} else if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}

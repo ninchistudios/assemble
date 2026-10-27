@@ -51,3 +51,26 @@ func TestAvailabilityRejectsBadStatus(t *testing.T) {
 		t.Error("the schema accepted an invalid status")
 	}
 }
+
+func TestNoteBelongsToAnAnswer(t *testing.T) {
+	s := newStore(t)
+	a, _ := s.CreateUser("sub-a", "a@example.com", "A", RoleMember, 0, t0)
+	if err := s.SetNote(a.ID, "2026-11-14", "late", t0); err != ErrNotFound {
+		t.Errorf("note without an answer err = %v, want ErrNotFound", err)
+	}
+	s.SetStatus(a.ID, "2026-11-14", cal.Yes, t0)
+	if err := s.SetNote(a.ID, "2026-11-14", "not until 8pm", t0); err != nil {
+		t.Fatal(err)
+	}
+	s.SetStatus(a.ID, "2026-11-14", cal.OK, t0) // changing status keeps the note
+	got, _ := s.Answers("2026-11-14", "2026-11-14")
+	if got["2026-11-14"][a.ID].Note != "not until 8pm" {
+		t.Errorf("note after status change = %q", got["2026-11-14"][a.ID].Note)
+	}
+	s.SetStatus(a.ID, "2026-11-14", cal.Unknown, t0) // back to [?] removes it
+	s.SetStatus(a.ID, "2026-11-14", cal.Yes, t0)
+	got, _ = s.Answers("2026-11-14", "2026-11-14")
+	if got["2026-11-14"][a.ID].Note != "" {
+		t.Error("note survived going back to [?]")
+	}
+}
