@@ -138,7 +138,11 @@ func securityHeaders(next http.Handler) http.Handler {
 		// No third-party anything: no CDN, no font service, no analytics.
 		h.Set("Content-Security-Policy",
 			"default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'")
-		h.Set("Referrer-Policy", "no-referrer")
+		// same-origin, not no-referrer: under no-referrer the browser sends
+		// "Origin: null" even on our own form posts (Fetch spec, "append a
+		// request Origin header"), and sameOrigin refuses every form (#13).
+		// same-origin still sends nothing to other sites.
+		h.Set("Referrer-Policy", "same-origin")
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("X-Robots-Tag", "noindex, nofollow")
 		// Group members' names and availability, behind a session cookie,
@@ -153,9 +157,9 @@ func securityHeaders(next http.Handler) http.Handler {
 // our own pages. SameSite=Lax already keeps the session cookie off cross-site
 // POSTs; this is the second lock, and it also covers the signed-out forms.
 //
-// Browsers send Origin on every POST. Referer is the fallback for the odd
-// client that strips Origin, and Referrer-Policy: no-referrer means our own
-// pages never send one, so in practice Origin decides.
+// Browsers send Origin on every POST; Referer is the fallback for the odd
+// client that strips it. Both depend on the Referrer-Policy our pages send:
+// see securityHeaders.
 func (s *Server) sameOrigin(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {

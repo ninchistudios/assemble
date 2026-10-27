@@ -235,6 +235,15 @@ func TestSecurityHeadersOnEveryResponse(t *testing.T) {
 	}
 }
 
+// Under no-referrer (or any policy that withholds the origin from same-origin
+// requests) browsers send "Origin: null" on our own form posts, and the origin
+// check refuses every form. That shipped once: #13.
+func TestReferrerPolicyKeepsSameOriginPosts(t *testing.T) {
+	if p := newEnv(t).get(t, "/").Header().Get("Referrer-Policy"); p != "same-origin" {
+		t.Errorf("Referrer-Policy = %q, want same-origin", p)
+	}
+}
+
 // The font is self-hosted; a wrong content type makes some browsers refuse it
 // and fall back silently to the system sans.
 func TestFontServedAsWoff2(t *testing.T) {
