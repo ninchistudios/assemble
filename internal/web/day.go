@@ -28,6 +28,12 @@ type dayView struct {
 	Mine     cal.Status
 	MyNote   string
 	MaxNote  int
+
+	Locked         bool
+	LockedOverride bool
+	Unavailable    string // who isn't [YES]/[OK]; empty if everyone is
+	CanLock        bool   // admin, editable, not locked
+	CanCancel      bool   // admin, editable, locked
 }
 
 // memberStatus is one enabled member's answer for the day.
@@ -145,6 +151,10 @@ func (s *Server) showDay(w http.ResponseWriter, u *store.User, d cal.Day) {
 	}
 	if !win.Beyond(d.Add(1)) {
 		v.Next = d.Add(1)
+	}
+	if err := s.lockState(&v, u); err != nil {
+		s.fail(w, "Couldn't load that day.", err)
+		return
 	}
 	for _, st := range cal.All {
 		v.Picks = append(v.Picks, pick{Value: st.Icon(), Label: st.Label(), Icon: st.Icon(), Selected: st == mine})

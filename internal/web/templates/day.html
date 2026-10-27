@@ -9,6 +9,8 @@
 {{if .Next}}<a class="day-step" href="/day/{{.Next}}" rel="next" aria-label="Next day">›</a>{{else}}<span class="day-step" aria-hidden="true"></span>{{end}}
 </div>
 
+{{if .Locked}}<div class="lock-banner">{{template "lock-icon"}}<span><b>Locked in.</b> The group is meeting{{if .LockedOverride}}, though not everyone said they could{{end}}.</span></div>{{end}}
+
 <h3 class="sr-only">My availability</h3>
 <form class="picker" method="post" action="/day/{{.Day}}/status"{{if not .Editable}} aria-disabled="true"{{end}}>
 {{range .Picks}}<button class="pick" type="submit" name="status" value="{{.Value}}" aria-pressed="{{.Selected}}"{{if not $.DayView.Editable}} disabled{{end}}>
@@ -29,6 +31,14 @@
 {{range .Group}}<li{{if .Me}} data-me{{end}} data-status="{{.Status.Icon}}"><span class="mini">{{template "status" .Status.Icon}}</span><span class="grow">{{.Name}}{{if .Me}} <span class="muted">(you)</span>{{end}}<span class="meta note">{{.Note}}</span></span><span class="status-word">{{.Status.Label}}</span></li>
 {{end}}</ul>
 {{range $.StatusIcons}}<template id="icon-{{.}}">{{template "status" .}}</template>{{end}}
+
+{{if .CanLock}}<form method="post" action="/day/{{.Day}}/lock"{{if .Unavailable}} data-confirm="Not everyone can make it: {{.Unavailable}}. Lock in anyway?"{{end}}>
+{{if .Unavailable}}<input type="hidden" name="override" value="1">{{end}}
+<button class="btn" type="submit">Lock in this day</button>
+</form>{{if .Unavailable}}<p class="muted lock-hint">Not everyone can make it yet: {{.Unavailable}}.</p>{{end}}{{end}}
+{{if .CanCancel}}<form method="post" action="/day/{{.Day}}/cancel" data-confirm="Cancel the locked-in session on {{.Label}}?">
+<button class="btn btn-danger" type="submit">Cancel the locked-in session</button>
+</form>{{end}}
 {{end}}
 
 <nav class="menu">

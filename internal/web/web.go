@@ -100,6 +100,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /day/{date}", s.requireUser(s.handleDay))
 	s.mux.HandleFunc("POST /day/{date}/status", s.requireUser(s.handleSetStatus))
 	s.mux.HandleFunc("POST /day/{date}/note", s.requireUser(s.handleSetNote))
+	s.mux.HandleFunc("POST /day/{date}/lock", s.requireAdmin(s.handleLock))
+	s.mux.HandleFunc("POST /day/{date}/cancel", s.requireAdmin(s.handleCancel))
 	s.mux.HandleFunc("GET /style", s.requireAdmin(s.handleStyle))
 
 	// Admin.
@@ -161,6 +163,7 @@ type page struct {
 	Members []memberRow
 
 	DayView     *dayView
+	Confirm     *confirmForm
 	StatusIcons []string // icon names, for the day page script to copy
 
 	DevBypass bool

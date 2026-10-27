@@ -347,6 +347,24 @@ span.day-step { background: none; }
 .pick:disabled { cursor: default; opacity: .55; }
 .picker-error { margin-top: -.25rem; }
 
+/* Locked in: the accent rather than a status colour, because a booking is a
+   different kind of thing from anyone's answer. */
+.lock-banner {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .6rem .8rem;
+  margin: 0 0 1rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.lock-icon { width: 36px; height: 36px; flex: none; }
+.lock-icon rect:first-child { fill: var(--accent); }
+.lock-icon path { fill: none; stroke: var(--on-accent); stroke-width: 4; stroke-linecap: round; }
+.lock-icon .body { fill: var(--on-accent); }
+.lock-hint { font-size: .85rem; margin-top: .5rem; }
+
 .note-form { display: flex; gap: 8px; margin: -.25rem 0 1rem; }
 .note-form input { flex: 1; min-width: 0; }
 .note-form .btn { margin: 0; }

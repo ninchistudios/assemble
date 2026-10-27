@@ -12,3 +12,6 @@
 {{/* mark: the app icon, four status tiles in a rounded square. Mirrors
      static/icon.svg, but drawn with the theme's tokens. */}}
 {{define "mark"}}<svg class="mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><rect class="m-bg" width="64" height="64" rx="15"/><rect class="m-yes" x="11" y="11" width="19" height="19" rx="5"/><rect class="m-ok" x="34" y="11" width="19" height="19" rx="5"/><rect class="m-no" x="11" y="34" width="19" height="19" rx="5"/><rect class="m-unknown" x="34" y="34" width="19" height="19" rx="5"/></svg>{{end}}
+
+{{/* lock-icon: a padlock in the rounded-square frame, for locked-in days. */}}
+{{define "lock-icon"}}<svg class="lock-icon" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><rect x="1.5" y="1.5" width="45" height="45" rx="11"/><path d="M17 22v-4a7 7 0 0 1 14 0v4"/><rect class="body" x="14" y="22" width="20" height="14" rx="3"/></svg>{{end}}

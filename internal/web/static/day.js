@@ -101,6 +101,13 @@ if (noteForm) {
   });
 }
 
+// Admin actions ask first. Without JS, the server's own confirm page does.
+document.querySelectorAll("form[data-confirm]").forEach((form) => {
+  form.addEventListener("submit", (e) => {
+    if (!confirm(form.dataset.confirm)) e.preventDefault();
+  });
+});
+
 // Navigation by swipe and arrow keys, following the page's own links.
 const prev = document.querySelector('a[rel="prev"]');
 const next = document.querySelector('a[rel="next"]');
