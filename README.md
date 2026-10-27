@@ -114,3 +114,7 @@ In VS Code, the **assemble: run local (dev sign-in)** task does the same. Sign i
 - [docs/testplan.md](docs/testplan.md): manual checks after each deploy
 - [docs/ui.md](docs/ui.md): the visual style, palette and icons
 - [agents.md](agents.md): product design and technical decisions
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).
