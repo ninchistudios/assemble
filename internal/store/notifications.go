@@ -35,11 +35,12 @@ func notify(tx execer, kind string, day cal.Day, actor int64, now time.Time) err
 	return nil
 }
 
-// Notices lists what userID hasn't dismissed, newest first. Notices for days
+// Notices lists what userID hasn't dismissed, newest first. The actor is
+// named as the group sees them: their display name if they chose one. Notices for days
 // before today have expired and are left out.
 func (s *Store) Notices(userID int64, today cal.Day) ([]Notice, error) {
 	rows, err := s.db.Query(`
-SELECT n.id, n.kind, n.day, COALESCE(n.actor_id, 0), COALESCE(u.name, ''), n.created_at
+SELECT n.id, n.kind, n.day, COALESCE(n.actor_id, 0), COALESCE(NULLIF(u.display_name, ''), u.name, ''), n.created_at
 FROM notifications n
 LEFT JOIN users u ON u.id = n.actor_id
 WHERE n.day >= ?

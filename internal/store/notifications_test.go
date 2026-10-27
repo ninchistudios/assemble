@@ -57,3 +57,15 @@ func TestDismissIsPerPersonAndNoticesExpire(t *testing.T) {
 		t.Error("notice for a past day still shown")
 	}
 }
+
+// #32: notices named the actor by their Google name, not their chosen one.
+func TestNoticesUseDisplayName(t *testing.T) {
+	s := newStore(t)
+	a, _ := s.CreateUser("sub-a", "a@example.com", "Ada Lovelace", RoleAdmin, 0, t0)
+	s.SetDisplayName(a.ID, "Ada")
+	s.Lock("2026-11-20", a.ID, false, t0)
+	n, _ := s.Notices(a.ID, "2026-11-14")
+	if len(n) != 1 || n[0].ActorName != "Ada" {
+		t.Errorf("notice actor = %+v, want display name Ada", n)
+	}
+}
