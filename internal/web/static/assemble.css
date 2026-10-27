@@ -46,6 +46,10 @@
   --danger: var(--no);
   --on-danger: #15171c;
 
+  /* Header band on a local test copy, so it is never mistaken for the real
+     one. Muted, so it reads as a warning rather than an error. */
+  --env-local: #4a2420;
+
   --font: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --radius: 12px;         /* fields, buttons, rows */
   --tap: 48px;            /* minimum touch target */
@@ -110,6 +114,18 @@ header .slot {
   letter-spacing: 0;
 }
 header nav { margin-left: auto; }
+
+/* Full-bleed band: the shadow paints the colour out to the viewport edges
+   and the clip keeps it to the header's height. */
+.env-local header {
+  background: var(--env-local);
+  box-shadow: 0 0 0 100vmax var(--env-local);
+  clip-path: inset(0 -100vmax);
+  margin-bottom: 1rem;
+}
+.env-local header .slot { color: var(--text); opacity: .8; }
+/* Qualified so it outranks the generic .tag rule further down. */
+header .env-tag { margin-left: auto; background: var(--no); color: var(--on-danger); }
 
 footer {
   padding: 1rem 0;

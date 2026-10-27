@@ -133,6 +133,7 @@ type page struct {
 	Members []memberRow
 
 	DevBypass bool
+	Local     bool   // a test copy on this machine: the header says so
 	Email     string // the account that was refused, on the denied page
 }
 
@@ -211,6 +212,7 @@ func limitBody(next http.Handler) http.Handler {
 func (s *Server) render(w http.ResponseWriter, status int, name string, p page) {
 	p.Version = s.cfg.Version
 	p.DevBypass = s.cfg.DevBypass
+	p.Local = s.cfg.Local()
 	p.Group = s.groupSettings()
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)

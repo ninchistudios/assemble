@@ -3,14 +3,16 @@ package config
 import "testing"
 
 func TestFormatVersion(t *testing.T) {
-	for _, tc := range []struct{ version, commit, want string }{
-		{"2026.1", "", "2026.1"},
-		{"2026.1", "a1b2c3d4e5f6", "2026.1 build a1b2c3d4"},
-		{"2026.1", "a1b2c3d4e5f6+", "2026.1 build a1b2c3d4+"},
-		{"dev", "abc", "dev build abc"},
+	for _, tc := range []struct{ version, branch, commit, want string }{
+		{"2026.1", "", "", "2026.1"},
+		{"2026.1", "main", "", "2026.1"},
+		{"2026.1", "", "a1b2c3d4e5f6", "2026.1 build a1b2c3d4"},
+		{"2026.1", "main", "a1b2c3d4e5f6", "2026.1 build main:a1b2c3d4"},
+		{"2026.1", "2026.1", "a1b2c3d4e5f6+", "2026.1 build 2026.1:a1b2c3d4+"},
+		{"dev", "", "abc", "dev build abc"},
 	} {
-		if got := formatVersion(tc.version, tc.commit); got != tc.want {
-			t.Errorf("formatVersion(%q, %q) = %q, want %q", tc.version, tc.commit, got, tc.want)
+		if got := formatVersion(tc.version, tc.branch, tc.commit); got != tc.want {
+			t.Errorf("formatVersion(%q, %q, %q) = %q, want %q", tc.version, tc.branch, tc.commit, got, tc.want)
 		}
 	}
 }
@@ -108,5 +110,19 @@ func TestDevBypassNeedsNoGoogle(t *testing.T) {
 	t.Setenv("ASSEMBLE_GOOGLE_CLIENT_SECRET", "")
 	if _, err := Load(); err != nil {
 		t.Fatalf("bypass without Google: %v", err)
+	}
+}
+
+func TestLocal(t *testing.T) {
+	for base, want := range map[string]bool{
+		"http://localhost:8138":        true,
+		"http://127.0.0.1:8138":        true,
+		"http://[::1]:8138":            true,
+		"https://assemble.example.com": false,
+		"http://192.168.1.20:8138":     false,
+	} {
+		if got := (Config{BaseURL: base}).Local(); got != want {
+			t.Errorf("Local(%s) = %v, want %v", base, got, want)
+		}
 	}
 }

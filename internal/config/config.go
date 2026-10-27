@@ -13,9 +13,9 @@ import (
 	"strings"
 )
 
-// Version is the release this build implements, and Commit the git revision it
-// was built from. Both are set at build time with -ldflags
-// "-X .../internal/config.Version=2026.1 -X .../internal/config.Commit=$(git rev-parse HEAD)".
+// Version is the release this build implements, Commit the git revision it was
+// built from, and Branch the branch (or tag) it came from. All are set at
+// build time with -ldflags "-X .../internal/config.Version=2026.1 ...".
 //
 // Commit has to be injected rather than read from the repository, because the
 // Docker build context excludes .git. For a plain local `go build` it is empty
@@ -23,6 +23,7 @@ import (
 var (
 	Version = "dev"
 	Commit  = ""
+	Branch  = ""
 )
 
 // shortCommit is how many hex characters of the revision to show.
@@ -33,20 +34,20 @@ const shortCommit = 8
 // contents are not what is actually running.
 const dirtyMark = "+"
 
-// VersionString is what the footer and /healthz show: "2026.1 build a1b2c3d4",
-// "2026.1 build a1b2c3d4+" when built from a dirty tree, or just "2026.1" when
-// the build does not know its commit.
+// VersionString is what the footer and /healthz show:
+// "2026.1 build main:a1b2c3d4", with a "+" when built from a dirty tree, the
+// branch left off when unknown, or just "2026.1" when the commit is unknown.
 func VersionString() string {
 	c := Commit
 	if c == "" {
 		c = vcsRevision()
 	}
-	return formatVersion(Version, c)
+	return formatVersion(Version, Branch, c)
 }
 
 // formatVersion truncates the revision to shortCommit characters, preserving
 // any dirty marker, which would otherwise be cut off by the truncation.
-func formatVersion(version, commit string) string {
+func formatVersion(version, branch, commit string) string {
 	dirty := strings.HasSuffix(commit, dirtyMark)
 	commit = strings.TrimSuffix(commit, dirtyMark)
 	if len(commit) > shortCommit {
@@ -57,6 +58,9 @@ func formatVersion(version, commit string) string {
 	}
 	if dirty {
 		commit += dirtyMark
+	}
+	if branch != "" {
+		commit = branch + ":" + commit
 	}
 	return version + " build " + commit
 }
@@ -151,6 +155,21 @@ func Load() (Config, error) {
 		return Config{}, errors.New("ASSEMBLE_DEV_BYPASS only runs against http://localhost or http://127.0.0.1")
 	}
 	return c, nil
+}
+
+// Local reports whether this instance is addressed as this machine, i.e. a
+// test or validation copy rather than the real one. Pages mark themselves
+// visibly when it is, so nobody mistakes one for the other.
+func (c Config) Local() bool {
+	u, err := url.Parse(c.BaseURL)
+	if err != nil {
+		return false
+	}
+	switch u.Hostname() {
+	case "localhost", "127.0.0.1", "::1":
+		return true
+	}
+	return false
 }
 
 // Secure reports whether cookies should carry the Secure attribute. Tied to the

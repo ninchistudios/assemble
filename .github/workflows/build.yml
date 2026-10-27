@@ -62,3 +62,4 @@ jobs:
           build-args: |
             VERSION=${{ steps.version.outputs.value }}
             COMMIT=${{ github.sha }}
+            BRANCH=${{ github.ref_name }}

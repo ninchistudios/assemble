@@ -244,6 +244,18 @@ func TestReferrerPolicyKeepsSameOriginPosts(t *testing.T) {
 	}
 }
 
+// A local test copy marks every page; the real instance never does.
+func TestLocalInstanceIsMarked(t *testing.T) {
+	if body := newEnv(t).get(t, "/").Body.String(); strings.Contains(body, "env-local") {
+		t.Error("public instance is marked local")
+	}
+	local := newEnv(t, func(c *config.Config) { c.BaseURL = "http://localhost:8138" })
+	body := local.get(t, "/").Body.String()
+	if !strings.Contains(body, `<body class="env-local">`) || !strings.Contains(body, ">local</span>") {
+		t.Error("local instance is not marked")
+	}
+}
+
 func TestStaticServesOnlyKnownFiles(t *testing.T) {
 	e := newEnv(t)
 	for _, p := range []string{"/static/", "/static/fonts/", "/static/nope.css"} {

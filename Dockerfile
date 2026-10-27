@@ -15,11 +15,14 @@ ARG VERSION=dev
 # COMMIT must be passed in: .dockerignore excludes .git, so the build cannot
 # discover the revision for itself.
 ARG COMMIT=""
+# BRANCH likewise: the branch or tag the build came from, for the footer.
+ARG BRANCH=""
 RUN CGO_ENABLED=0 GOOS=linux go build \
       -trimpath \
       -ldflags="-s -w \
         -X github.com/ninchistudios/assemble/internal/config.Version=${VERSION} \
-        -X github.com/ninchistudios/assemble/internal/config.Commit=${COMMIT}" \
+        -X github.com/ninchistudios/assemble/internal/config.Commit=${COMMIT} \
+        -X github.com/ninchistudios/assemble/internal/config.Branch=${BRANCH}" \
       -o /out/assemble .
 # An empty directory to seed /data from. Docker initialises a fresh named
 # volume from whatever the image has at the mount point, ownership included, so

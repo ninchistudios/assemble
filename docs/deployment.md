@@ -84,7 +84,7 @@ For NPM, add a Proxy Host:
 - **Block Common Exploits:** on
 - **SSL:** request a Let's Encrypt certificate, then enable **Force SSL** and **HTTP/2**. HSTS is safe to enable.
 
-To check, open `https://YOUR-DOMAIN/healthz`. It should return `ok 2026.1 build <commit>`, the same version the page footer shows.
+To check, open `https://YOUR-DOMAIN/healthz`. It should return `ok 2026.1 build <branch>:<commit>`, the same version the page footer shows.
 
 ## First sign-in
 
@@ -132,18 +132,19 @@ Database migrations run automatically at startup. Sessions live in the database,
 
 ## Building the image yourself
 
-`.dockerignore` excludes `.git`, so the build can't read the revision itself. Pass it in, or the footer shows the version with no commit:
+`.dockerignore` excludes `.git`, so the build can't read the revision or branch itself. Pass them in, or the footer shows the version alone:
 
 ```sh
 docker build \
   --build-arg VERSION="$(cat VERSION)" \
   --build-arg COMMIT="$(git rev-parse HEAD)$(test -z "$(git status --porcelain)" || echo +)" \
+  --build-arg BRANCH="$(git branch --show-current)" \
   -t assemble:local .
 ```
 
-The `VERSION` file at the repo root is the app version. A trailing `+` on the commit marks a build made from uncommitted changes. The footer and `/healthz` show the first 8 characters, e.g. `2026.1 build 156fac22`.
+The `VERSION` file at the repo root is the app version. A trailing `+` on the commit marks a build made from uncommitted changes. The footer and `/healthz` show the branch and the first 8 characters of the commit, e.g. `2026.1 build main:156fac22`. CI images carry the branch or tag they were built from.
 
-To build with Compose instead, replace `image:` with a `build:` section that passes the commit through:
+To build with Compose instead, replace `image:` with a `build:` section that passes them through:
 
 ```yaml
     build:
@@ -151,12 +152,17 @@ To build with Compose instead, replace `image:` with a `build:` section that pas
       args:
         VERSION: "2026.1"
         COMMIT: ${ASSEMBLE_COMMIT:-}
+        BRANCH: ${ASSEMBLE_BRANCH:-}
 ```
 
 ```sh
-ASSEMBLE_COMMIT=$(git rev-parse HEAD) docker compose up -d --build              # bash
-$env:ASSEMBLE_COMMIT = git rev-parse HEAD; docker compose up -d --build         # PowerShell
+# bash
+ASSEMBLE_COMMIT=$(git rev-parse HEAD) ASSEMBLE_BRANCH=$(git branch --show-current) docker compose up -d --build
+# PowerShell
+$env:ASSEMBLE_COMMIT = git rev-parse HEAD; $env:ASSEMBLE_BRANCH = git branch --show-current; docker compose up -d --build
 ```
+
+A copy whose `ASSEMBLE_BASE_URL` is `localhost` or `127.0.0.1` marks every page with a muted red header and a **local** tag, so a test copy is never mistaken for the real one.
 
 ## Troubleshooting
 
