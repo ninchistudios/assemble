@@ -1,0 +1,14 @@
+{{/* Inline SVG icons. All share the rounded-square frame; see docs/ui.md. */}}
+
+{{/* status: a filled rounded square with the glyph for one status.
+     Takes "yes", "ok", "no" or "unknown". */}}
+{{define "status"}}<svg class="status status-{{.}}" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><rect x="1.5" y="1.5" width="45" height="45" rx="11"/>{{template "glyph" .}}</svg>{{end}}
+
+{{/* status-off: the same square, outlined, as shown for an unchosen option. */}}
+{{define "status-off"}}<svg class="status off status-{{.}}" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><rect x="1.5" y="1.5" width="45" height="45" rx="11"/>{{template "glyph" .}}</svg>{{end}}
+
+{{define "glyph"}}{{if eq . "yes"}}<path d="M14 25l7 7 13-15"/>{{else if eq . "ok"}}<path d="M13 26c3.7-5.3 7.3-5.3 11 0s7.3 5.3 11 0"/>{{else if eq . "no"}}<path d="M16 16l16 16M32 16L16 32"/>{{else}}<path d="M18.5 18.5a5.5 5.5 0 1 1 8 4.9c-1.7.9-2.5 2-2.5 3.6v1"/><circle cx="24" cy="34.5" r="2.6"/>{{end}}{{end}}
+
+{{/* mark: the app icon, four status tiles in a rounded square. Mirrors
+     static/icon.svg, but drawn with the theme's tokens. */}}
+{{define "mark"}}<svg class="mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><rect class="m-bg" width="64" height="64" rx="15"/><rect class="m-yes" x="11" y="11" width="19" height="19" rx="5"/><rect class="m-ok" x="34" y="11" width="19" height="19" rx="5"/><rect class="m-no" x="11" y="34" width="19" height="19" rx="5"/><rect class="m-unknown" x="34" y="34" width="19" height="19" rx="5"/></svg>{{end}}

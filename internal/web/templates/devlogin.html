@@ -1,0 +1,10 @@
+{{define "devlogin.html"}}{{template "top" .}}
+<h2>Dev sign-in</h2>
+<div class="notice error">Google is bypassed (<code>ASSEMBLE_DEV_BYPASS</code>). Any email typed here is treated as a verified Google account. Local use only.</div>
+{{if .Error}}<div class="notice error">{{.Error}}</div>{{end}}
+<form method="post" action="/auth/dev">
+<div class="field"><label for="email">Email</label><input id="email" name="email" type="text" inputmode="email" autocomplete="off" required></div>
+<div class="field"><label for="name">Name <span class="muted">optional</span></label><input id="name" name="name" type="text" autocomplete="off"></div>
+<button class="btn" type="submit">Sign in</button>
+</form>
+{{template "bottom" .}}{{end}}

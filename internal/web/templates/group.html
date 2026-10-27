@@ -1,0 +1,27 @@
+{{define "group.html"}}{{template "top" .}}
+{{template "admin-tabs" .}}
+{{if .Saved}}<div class="notice ok">Saved.</div>{{end}}
+{{if .Error}}<div class="notice error">{{.Error}}</div>{{end}}
+<form method="post" action="/admin/group">
+<div class="field"><label for="group_name">Group name</label><input id="group_name" name="group_name" type="text" maxlength="60" value="{{.Form.GroupName}}" required></div>
+<div class="field">
+<div class="field-row">
+<div><label for="slot_start">Starts</label><input id="slot_start" name="slot_start" type="time" value="{{.Form.SlotStart}}" required></div>
+<div><label for="slot_end">Ends</label><input id="slot_end" name="slot_end" type="time" value="{{.Form.SlotEnd}}" required></div>
+</div>
+<p class="hint">The one time each day the group could meet. An end before the start runs past midnight.</p>
+</div>
+<div class="field"><label for="timezone">Timezone</label><input id="timezone" name="timezone" type="text" list="zones" autocomplete="off" spellcheck="false" value="{{.Form.Timezone}}" required>
+<datalist id="zones">{{range .Zones}}<option value="{{.}}">{{end}}</datalist>
+<p class="hint">Region/City, e.g. Australia/Brisbane. Days start and end in this timezone.</p></div>
+<button class="btn" type="submit">Save</button>
+</form>
+{{template "bottom" .}}{{end}}
+
+{{define "admin-tabs"}}<h2>Admin</h2>
+<nav class="tabs" aria-label="Admin sections">
+<a href="/admin/group"{{if eq .Tab "group"}} aria-current="page"{{end}}>Group</a>
+<a href="/admin/invites"{{if eq .Tab "invites"}} aria-current="page"{{end}}>Invites</a>
+<a href="/admin/members"{{if eq .Tab "members"}} aria-current="page"{{end}}>Members</a>
+<a href="/style"{{if eq .Tab "style"}} aria-current="page"{{end}}>Style</a>
+</nav>{{end}}

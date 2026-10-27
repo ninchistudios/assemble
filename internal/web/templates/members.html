@@ -1,0 +1,13 @@
+{{define "members.html"}}{{template "top" .}}
+{{template "admin-tabs" .}}
+<p>Everyone who has joined. Disabling someone signs them out at once and stops them signing back in, even through an active invite link.</p>
+<ul class="rows members">
+{{range .Members}}<li class="member{{if not .Enabled}} off{{end}}">
+<span class="grow">{{.Name}}{{if .You}} <span class="muted">(you)</span>{{end}}<span class="meta">{{.Email}} · joined {{.Joined}}</span></span>
+{{if .Admin}}<span class="tag">admin</span>{{end}}
+{{if not .Enabled}}<span class="tag">disabled</span>{{end}}
+{{if not .You}}{{if .Enabled}}<form method="post" action="/admin/members/{{.ID}}/disable" data-confirm="Disable {{.Name}}? They'll be signed out now and can't sign back in until you enable them again."><button class="btn btn-danger btn-small" type="submit">Disable</button></form>{{else}}<form method="post" action="/admin/members/{{.ID}}/enable"><button class="btn btn-quiet btn-small" type="submit">Enable</button></form>{{end}}{{end}}
+</li>
+{{end}}</ul>
+<script src="/static/admin.js" defer></script>
+{{template "bottom" .}}{{end}}

@@ -1,0 +1,6 @@
+{{define "home.html"}}{{template "top" .}}
+<h2>Hi, {{.User.Name}}</h2>
+<p>You're in. The calendar for setting your availability arrives in the next release.</p>
+{{if .User.IsAdmin}}<a class="btn" href="/admin">Admin</a>{{end}}
+<form method="post" action="/auth/logout"><button class="btn btn-quiet" type="submit">Sign out</button></form>
+{{template "bottom" .}}{{end}}

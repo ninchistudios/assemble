@@ -1,0 +1,24 @@
+{{define "invites.html"}}{{template "top" .}}
+{{template "admin-tabs" .}}
+<p>Post a link in your group chat. Anyone who opens it can join with their Google account until you disable it.</p>
+<form method="post" action="/admin/invites"><button class="btn" type="submit">Create invite link</button></form>
+
+{{if .Invites}}<h3>Links</h3>
+<ul class="rows invites">
+{{range .Invites}}{{if .Active}}<li class="invite">
+<div class="grow">
+<input class="link" type="text" readonly value="{{.URL}}" aria-label="Invite link" spellcheck="false">
+<span class="meta">Created {{.Created}} · {{.Joined}} joined</span>
+<div class="actions">
+<button class="btn btn-quiet" type="button" data-copy="{{.URL}}" hidden>Copy</button>
+<button class="btn btn-quiet" type="button" data-share="{{.URL}}" hidden>Share</button>
+<form method="post" action="/admin/invites/{{.ID}}/disable" data-confirm="Disable this link? Nobody new can join with it, and it can't be turned back on. Members who already joined are not affected."><button class="btn btn-danger" type="submit">Disable</button></form>
+</div>
+</div>
+</li>{{else}}<li class="invite off">
+<span class="grow">Link {{.ID}}<span class="meta">Created {{.Created}} · disabled {{.Disabled}} · {{.Joined}} joined</span></span>
+<span class="tag">disabled</span>
+</li>{{end}}
+{{end}}</ul>{{else}}<p class="muted">No invite links yet.</p>{{end}}
+<script src="/static/admin.js" defer></script>
+{{template "bottom" .}}{{end}}

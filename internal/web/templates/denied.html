@@ -1,0 +1,6 @@
+{{define "denied.html"}}{{template "top" .}}
+<h2>{{.Title}}</h2>
+<p>{{.Message}}</p>
+{{if .Email}}<p class="muted">Signed in to Google as <code>{{.Email}}</code>.</p>{{end}}
+<a class="btn btn-quiet" href="/auth/login">Try a different account</a>
+{{template "bottom" .}}{{end}}

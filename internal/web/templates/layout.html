@@ -1,0 +1,28 @@
+{{define "top"}}<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="{{if .Local}}#4a2420{{else}}#15171c{{end}}">
+<meta name="robots" content="noindex, nofollow">
+<title>{{.Group.GroupName}}{{if .Title}}: {{.Title}}{{end}}</title>
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/static/icon.svg">
+<link rel="preload" href="/static/fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/static/assemble.css">
+</head>
+<body{{if .Local}} class="env-local"{{end}}>
+<header>
+<a href="/" aria-label="home">{{template "mark"}}</a>
+<h1>{{.Group.GroupName}}<span class="slot">{{.Group.SlotStart}}–{{.Group.SlotEnd}} · {{.Group.Timezone}}</span></h1>
+{{if .Local}}<span class="tag env-tag">local</span>{{end}}
+</header>
+<main>
+{{end}}
+
+{{define "bottom"}}
+</main>
+<footer>assemble {{.Version}}</footer>
+</body>
+</html>
+{{end}}
