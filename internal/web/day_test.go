@@ -1,0 +1,134 @@
+package web
+
+import (
+	"encoding/json"
+	"net/http"
+	"net/url"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/ninchistudios/assemble/internal/cal"
+)
+
+// fixedNow is 10:00 UTC on Saturday 14 November 2026; the test group is on
+// UTC, so today is 2026-11-14 and the horizon is 2027-01-14.
+var fixedNow = time.Date(2026, 11, 14, 10, 0, 0, 0, time.UTC)
+
+func dayEnv(t *testing.T) (*testEnv, *http.Cookie) {
+	t.Helper()
+	e := newEnv(t)
+	e.s.now = func() time.Time { return fixedNow }
+	return e, e.session(t, adminID)
+}
+
+func pressed(body, value string) bool {
+	return strings.Contains(body, `value="`+value+`" aria-pressed="true"`)
+}
+
+func TestHomeIsToday(t *testing.T) {
+	e, c := dayEnv(t)
+	body := e.get(t, "/", c).Body.String()
+	for _, want := range []string{"Saturday 14 November", ">today<", `action="/day/2026-11-14/status"`, `href="/day/2026-11-13"`, `href="/day/2026-11-15"`} {
+		if !strings.Contains(body, want) {
+			t.Errorf("home missing %q", want)
+		}
+	}
+	if !pressed(body, "unknown") {
+		t.Error("unanswered day doesn't show [?] selected")
+	}
+}
+
+func TestSetStatusByScript(t *testing.T) {
+	e, c := dayEnv(t)
+	req := httptestForm("/day/2026-11-20/status", testBase, url.Values{"status": {"yes"}}, c)
+	req.Header.Set("Accept", "application/json")
+	rec := e.serve(req)
+	var got map[string]string
+	json.Unmarshal(rec.Body.Bytes(), &got)
+	if rec.Code != http.StatusOK || got["status"] != "yes" {
+		t.Fatalf("JSON set = %d %v", rec.Code, got)
+	}
+	if body := e.get(t, "/day/2026-11-20", c).Body.String(); !pressed(body, "yes") {
+		t.Error("saved status not shown as selected")
+	}
+}
+
+func TestSetStatusByForm(t *testing.T) {
+	e, c := dayEnv(t)
+	rec := e.do(t, http.MethodPost, "/day/2026-11-14/status", url.Values{"status": {"ok"}}, c)
+	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/day/2026-11-14" {
+		t.Fatalf("form set = %d -> %s", rec.Code, rec.Header().Get("Location"))
+	}
+	// Back to [?] clears it.
+	e.do(t, http.MethodPost, "/day/2026-11-14/status", url.Values{"status": {"unknown"}}, c)
+	if body := e.get(t, "/", c).Body.String(); !pressed(body, "unknown") {
+		t.Error("clearing didn't return the day to [?]")
+	}
+}
+
+func TestPastDaysAreReadOnly(t *testing.T) {
+	e, c := dayEnv(t)
+	body := e.get(t, "/day/2026-11-13", c).Body.String()
+	if !strings.Contains(body, "has passed") || !strings.Contains(body, "disabled") {
+		t.Error("past day isn't shown read-only")
+	}
+	rec := e.do(t, http.MethodPost, "/day/2026-11-13/status", url.Values{"status": {"yes"}}, c)
+	if rec.Code != http.StatusConflict {
+		t.Errorf("setting a past day = %d, want 409", rec.Code)
+	}
+	u, _ := e.db.UserBySub(adminID.Sub)
+	if st, _ := e.db.Status(u.ID, "2026-11-13"); st != cal.Unknown {
+		t.Error("past day was changed")
+	}
+}
+
+func TestHorizon(t *testing.T) {
+	e, c := dayEnv(t)
+	last := e.get(t, "/day/2027-01-14", c)
+	if last.Code != http.StatusOK || strings.Contains(last.Body.String(), `rel="next"`) {
+		t.Errorf("last day = %d, or offers a next day", last.Code)
+	}
+	if rec := e.get(t, "/day/2027-01-15", c); rec.Code != http.StatusNotFound {
+		t.Errorf("beyond the horizon = %d, want 404", rec.Code)
+	}
+	rec := e.do(t, http.MethodPost, "/day/2027-01-15/status", url.Values{"status": {"yes"}}, c)
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("setting beyond the horizon = %d, want 404", rec.Code)
+	}
+}
+
+func TestBadDayAndStatus(t *testing.T) {
+	e, c := dayEnv(t)
+	for _, p := range []string{"/day/tomorrow", "/day/2026-02-30", "/day/2026-11-5"} {
+		if rec := e.get(t, p, c); rec.Code != http.StatusNotFound {
+			t.Errorf("GET %s = %d, want 404", p, rec.Code)
+		}
+	}
+	if rec := e.do(t, http.MethodPost, "/day/2026-11-14/status", url.Values{"status": {"maybe"}}, c); rec.Code != http.StatusBadRequest {
+		t.Errorf("bad status = %d, want 400", rec.Code)
+	}
+}
+
+func TestDayNeedsSignIn(t *testing.T) {
+	e, _ := dayEnv(t)
+	if rec := e.get(t, "/day/2026-11-14"); rec.Code != http.StatusUnauthorized {
+		t.Errorf("signed-out day = %d", rec.Code)
+	}
+	if rec := e.do(t, http.MethodPost, "/day/2026-11-14/status", url.Values{"status": {"yes"}}); rec.Code != http.StatusUnauthorized {
+		t.Errorf("signed-out set = %d", rec.Code)
+	}
+}
+
+// Today follows the group's timezone: at 23:30 UTC on the 14th it is already
+// the 15th in Brisbane.
+func TestTodayFollowsGroupTimezone(t *testing.T) {
+	e, c := dayEnv(t)
+	e.s.now = func() time.Time { return time.Date(2026, 11, 14, 23, 30, 0, 0, time.UTC) }
+	st, _ := e.db.Settings()
+	st.Timezone = "Australia/Brisbane"
+	e.db.SaveSettings(st, fixedNow)
+	if body := e.get(t, "/", c).Body.String(); !strings.Contains(body, "Sunday 15 November") {
+		t.Error("home isn't today in the group timezone")
+	}
+}

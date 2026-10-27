@@ -1,0 +1,29 @@
+{{define "day.html"}}{{template "top" .}}
+{{with .DayView}}
+<div class="day-head">
+<a class="day-step" href="/day/{{.Prev}}" rel="prev" aria-label="Previous day">‹</a>
+<div class="day-title">
+<h2>{{.Label}}</h2>
+{{if .IsToday}}<span class="tag">today</span>{{else if .Past}}<span class="tag">past</span>{{end}}
+</div>
+{{if .Next}}<a class="day-step" href="/day/{{.Next}}" rel="next" aria-label="Next day">›</a>{{else}}<span class="day-step" aria-hidden="true"></span>{{end}}
+</div>
+
+<h3 class="sr-only">My availability</h3>
+<form class="picker" method="post" action="/day/{{.Day}}/status"{{if not .Editable}} aria-disabled="true"{{end}}>
+{{range .Picks}}<button class="pick" type="submit" name="status" value="{{.Value}}" aria-pressed="{{.Selected}}"{{if not $.DayView.Editable}} disabled{{end}}>
+<span class="on">{{template "status" .Icon}}</span><span class="off">{{template "status-off" .Icon}}</span>
+<span class="pick-label">{{.Label}}</span>
+</button>{{end}}
+</form>
+{{if .Past}}<p class="muted">This day has passed, so it can't be changed.</p>{{end}}
+<p class="picker-error notice error" role="alert" hidden></p>
+{{end}}
+
+<nav class="menu">
+{{if .User.IsAdmin}}<a href="/admin">Admin</a>{{end}}
+<form method="post" action="/auth/logout"><button type="submit" class="link">Sign out</button></form>
+</nav>
+<p class="muted signed-in">Signed in as {{.User.Name}}</p>
+<script src="/static/day.js" defer></script>
+{{template "bottom" .}}{{end}}

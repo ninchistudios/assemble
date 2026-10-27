@@ -35,6 +35,9 @@ type Server struct {
 
 	// refusals rate-limits the log lines strangers can cause.
 	refusals *logLimiter
+
+	// now is the clock the calendar reads; tests replace it to pin "today".
+	now func() time.Time
 }
 
 // maxBody caps a request body. The largest real form is the group settings,
@@ -62,6 +65,7 @@ func New(cfg config.Config, db *store.Store) (*Server, error) {
 		mux:      http.NewServeMux(),
 		etags:    etags,
 		refusals: newLogLimiter(20, time.Hour),
+		now:      time.Now,
 	}
 	if err := s.bindExistingAdmin(); err != nil {
 		return nil, err
@@ -91,7 +95,10 @@ func (s *Server) bindExistingAdmin() error {
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) { s.handler.ServeHTTP(w, r) }
 
 func (s *Server) routes() {
-	s.mux.HandleFunc("GET /{$}", s.requireUser(s.handleHome))
+	// Calendar. Home is today.
+	s.mux.HandleFunc("GET /{$}", s.requireUser(s.handleToday))
+	s.mux.HandleFunc("GET /day/{date}", s.requireUser(s.handleDay))
+	s.mux.HandleFunc("POST /day/{date}/status", s.requireUser(s.handleSetStatus))
 	s.mux.HandleFunc("GET /style", s.requireAdmin(s.handleStyle))
 
 	// Admin.
@@ -151,6 +158,8 @@ type page struct {
 	Saved   bool
 	Invites []inviteRow
 	Members []memberRow
+
+	DayView *dayView
 
 	DevBypass bool
 	Local     bool   // a test copy on this machine: the header says so
@@ -293,10 +302,6 @@ func (s *Server) staticHandler() http.Handler {
 
 func (s *Server) notFound(w http.ResponseWriter) {
 	s.render(w, http.StatusNotFound, "message.html", page{Title: "Not found", Message: "There's nothing here."})
-}
-
-func (s *Server) handleHome(w http.ResponseWriter, r *http.Request, u *store.User) {
-	s.render(w, http.StatusOK, "home.html", page{User: u})
 }
 
 // handleStyle shows the palette, type and icons on a real device. See

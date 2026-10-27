@@ -61,7 +61,7 @@ func TestJoinViaInvite(t *testing.T) {
 	if err != nil || u.Role != store.RoleMember || u.InviteID != inv.ID || u.Name != "Jo" {
 		t.Fatalf("joined user = %+v, %v", u, err)
 	}
-	if body := e.get(t, "/", session).Body.String(); !strings.Contains(body, "Hi, Jo") {
+	if body := e.get(t, "/", session).Body.String(); !strings.Contains(body, "Signed in as Jo") {
 		t.Error("new member does not land on the home page")
 	}
 	if invs, _ := e.db.Invites(); invs[0].Joined != 1 {
