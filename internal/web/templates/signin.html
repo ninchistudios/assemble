@@ -1,0 +1,6 @@
+{{define "signin.html"}}{{template "top" .}}
+<h2>Sign in</h2>
+<p>Find the days your group can get together.</p>
+{{if .Error}}<div class="notice error">{{.Error}}</div>{{end}}
+<a class="btn" href="/auth/login">Sign in with Google</a>
+{{template "bottom" .}}{{end}}

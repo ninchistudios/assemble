@@ -152,7 +152,7 @@ a { color: var(--accent); font-weight: 650; text-decoration-thickness: 2px; text
   color: var(--text);
 }
 .btn-danger { background: var(--danger); color: var(--on-danger); }
-.btn + .btn { margin-top: .75rem; }
+.btn + .btn, .btn + form, form + .btn, form + form { margin-top: .75rem; }
 form.inline { display: inline; }
 
 /* ---- forms ---------------------------------------------------------------- */

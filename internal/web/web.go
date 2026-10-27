@@ -9,7 +9,9 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"strings"
 
+	"github.com/ninchistudios/assemble/internal/auth"
 	"github.com/ninchistudios/assemble/internal/config"
 	"github.com/ninchistudios/assemble/internal/store"
 )
@@ -23,6 +25,7 @@ var staticFS embed.FS
 type Server struct {
 	cfg     config.Config
 	db      *store.Store
+	google  auth.Google
 	tpl     *template.Template
 	mux     *http.ServeMux
 	handler http.Handler
@@ -39,22 +42,37 @@ func New(cfg config.Config, db *store.Store) (*Server, error) {
 		return nil, err
 	}
 	s := &Server{
-		cfg:   cfg,
-		db:    db,
+		cfg: cfg,
+		db:  db,
+		google: auth.Google{
+			ClientID:     cfg.GoogleClientID,
+			ClientSecret: cfg.GoogleClientSecret,
+			RedirectURL:  cfg.RedirectURL(),
+		},
 		tpl:   tpl,
 		mux:   http.NewServeMux(),
 		etags: etags,
 	}
 	s.routes()
-	s.handler = securityHeaders(s.mux)
+	s.handler = securityHeaders(s.sameOrigin(s.mux))
 	return s, nil
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) { s.handler.ServeHTTP(w, r) }
 
 func (s *Server) routes() {
-	s.mux.HandleFunc("GET /{$}", s.handleHome)
-	s.mux.HandleFunc("GET /style", s.handleStyle)
+	s.mux.HandleFunc("GET /{$}", s.requireUser(s.handleHome))
+	s.mux.HandleFunc("GET /style", s.requireAdmin(s.handleStyle))
+
+	// Sign-in flow.
+	s.mux.HandleFunc("GET /auth/login", s.handleLogin)
+	s.mux.HandleFunc("GET /auth/callback", s.handleCallback)
+	s.mux.HandleFunc("POST /auth/logout", s.handleLogout)
+	// Registered only under the bypass, which config.Load refuses to enable
+	// anywhere but http://localhost, so this cannot exist in production.
+	if s.cfg.DevBypass {
+		s.mux.HandleFunc("POST /auth/dev", s.handleDevLogin)
+	}
 
 	// Unauthenticated. Liveness plus the build, so a deploy can be confirmed
 	// from outside without signing in. Fails if the database has gone away,
@@ -82,6 +100,11 @@ type page struct {
 	Title   string // suffix in the browser tab; empty on the home page
 	Version string
 	Message string
+	Error   string
+	User    *store.User // nil when signed out
+
+	DevBypass bool
+	Email     string // the account that was refused, on the denied page
 }
 
 // securityHeaders sets the headers every response carries, error responses
@@ -105,10 +128,37 @@ func securityHeaders(next http.Handler) http.Handler {
 	})
 }
 
+// sameOrigin refuses any state-changing request that did not come from one of
+// our own pages. SameSite=Lax already keeps the session cookie off cross-site
+// POSTs; this is the second lock, and it also covers the signed-out forms.
+//
+// Browsers send Origin on every POST. Referer is the fallback for the odd
+// client that strips Origin, and Referrer-Policy: no-referrer means our own
+// pages never send one, so in practice Origin decides.
+func (s *Server) sameOrigin(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet, http.MethodHead, http.MethodOptions:
+			next.ServeHTTP(w, r)
+			return
+		}
+		origin := r.Header.Get("Origin")
+		ok := origin == s.cfg.BaseURL ||
+			(origin == "" && strings.HasPrefix(r.Header.Get("Referer"), s.cfg.BaseURL+"/"))
+		if !ok {
+			log.Printf("refused %s %s from origin %q", r.Method, r.URL.Path, origin)
+			s.render(w, http.StatusForbidden, "message.html", page{Title: "Not allowed", Message: "That request didn't come from this site."})
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // render writes a page with its status. Taking the status as a parameter keeps
 // WriteHeader in one place, after the content type is set.
 func (s *Server) render(w http.ResponseWriter, status int, name string, p page) {
 	p.Version = s.cfg.Version
+	p.DevBypass = s.cfg.DevBypass
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
 	if err := s.tpl.ExecuteTemplate(w, name, p); err != nil {
@@ -116,6 +166,12 @@ func (s *Server) render(w http.ResponseWriter, status int, name string, p page) 
 		// 500. Log it; the client gets a truncated page.
 		log.Printf("render %s: %v", name, err)
 	}
+}
+
+// fail logs the real cause and shows the visitor a generic message.
+func (s *Server) fail(w http.ResponseWriter, msg string, err error) {
+	log.Printf("error: %s: %v", msg, err)
+	s.render(w, http.StatusInternalServerError, "message.html", page{Title: "Something went wrong", Message: msg})
 }
 
 // staticETags hashes each embedded asset once at startup. embed.FS reports a
@@ -156,12 +212,12 @@ func (s *Server) staticHandler() http.Handler {
 	})
 }
 
-func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
-	s.render(w, http.StatusOK, "home.html", page{})
+func (s *Server) handleHome(w http.ResponseWriter, r *http.Request, u *store.User) {
+	s.render(w, http.StatusOK, "home.html", page{User: u})
 }
 
 // handleStyle shows the palette, type and icons on a real device. See
 // docs/ui.md.
-func (s *Server) handleStyle(w http.ResponseWriter, r *http.Request) {
-	s.render(w, http.StatusOK, "style.html", page{Title: "Style"})
+func (s *Server) handleStyle(w http.ResponseWriter, r *http.Request, u *store.User) {
+	s.render(w, http.StatusOK, "style.html", page{Title: "Style", User: u})
 }

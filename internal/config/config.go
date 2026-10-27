@@ -7,6 +7,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"runtime/debug"
 	"strings"
@@ -92,26 +93,61 @@ type Config struct {
 	// works with no configuration; in the container it is an absolute path on
 	// a mounted volume, because the database must never live in the image.
 	DBPath string
+
+	GoogleClientID     string
+	GoogleClientSecret string
+
+	// AdminEmail bootstraps the first admin: the Google account that signs in
+	// with this verified address becomes admin and is bound to its sub. The
+	// only place an email identifies anyone. See agents.md > Auth.
+	AdminEmail string
+
+	// DevBypass replaces Google with a local form that signs in as any email
+	// typed into it, so join and disable flows can be tried with several
+	// "people". Refuses to activate unless BaseURL is http on localhost.
+	DevBypass bool
 }
+
+// RedirectURL is the OAuth callback registered in the Google Cloud console.
+func (c Config) RedirectURL() string { return c.BaseURL + "/auth/callback" }
 
 func Load() (Config, error) {
 	c := Config{
-		Listen:  envOr("ASSEMBLE_LISTEN", ":8080"),
-		BaseURL: strings.TrimRight(os.Getenv("ASSEMBLE_BASE_URL"), "/"),
-		Version: VersionString(),
-		DBPath:  envOr("ASSEMBLE_DB_PATH", "data/assemble.db"),
+		Listen:             envOr("ASSEMBLE_LISTEN", ":8080"),
+		BaseURL:            strings.TrimRight(os.Getenv("ASSEMBLE_BASE_URL"), "/"),
+		Version:            VersionString(),
+		DBPath:             envOr("ASSEMBLE_DB_PATH", "data/assemble.db"),
+		GoogleClientID:     os.Getenv("ASSEMBLE_GOOGLE_CLIENT_ID"),
+		GoogleClientSecret: os.Getenv("ASSEMBLE_GOOGLE_CLIENT_SECRET"),
+		AdminEmail:         strings.TrimSpace(os.Getenv("ASSEMBLE_ADMIN_EMAIL")),
+		DevBypass:          os.Getenv("ASSEMBLE_DEV_BYPASS") == "1",
 	}
 
 	var missing []string
 	if c.BaseURL == "" {
 		missing = append(missing, "ASSEMBLE_BASE_URL")
 	}
+	if c.AdminEmail == "" {
+		missing = append(missing, "ASSEMBLE_ADMIN_EMAIL")
+	}
+	if !c.DevBypass {
+		if c.GoogleClientID == "" {
+			missing = append(missing, "ASSEMBLE_GOOGLE_CLIENT_ID")
+		}
+		if c.GoogleClientSecret == "" {
+			missing = append(missing, "ASSEMBLE_GOOGLE_CLIENT_SECRET")
+		}
+	}
 	if len(missing) > 0 {
 		return Config{}, fmt.Errorf("missing required environment: %s", strings.Join(missing, ", "))
 	}
 
-	if !strings.HasPrefix(c.BaseURL, "http://") && !strings.HasPrefix(c.BaseURL, "https://") {
+	u, err := url.Parse(c.BaseURL)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 		return Config{}, errors.New("ASSEMBLE_BASE_URL must include the scheme, e.g. https://assemble.example.com")
+	}
+	if c.DevBypass && (u.Scheme != "http" || (u.Hostname() != "localhost" && u.Hostname() != "127.0.0.1")) {
+		return Config{}, errors.New("ASSEMBLE_DEV_BYPASS only runs against http://localhost or http://127.0.0.1")
 	}
 	return c, nil
 }
