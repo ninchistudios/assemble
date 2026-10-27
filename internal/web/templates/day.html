@@ -36,7 +36,7 @@
 {{if .Unavailable}}<input type="hidden" name="override" value="1">{{end}}
 <button class="btn" type="submit">Lock in this day</button>
 </form>{{if .Unavailable}}<p class="muted lock-hint">Not everyone can make it yet: {{.Unavailable}}.</p>{{end}}{{end}}
-{{if .CanCancel}}<form method="post" action="/day/{{.Day}}/cancel" data-confirm="Cancel the locked-in session on {{.Label}}?">
+{{if .CanCancel}}<form method="post" action="/day/{{.Day}}/cancel" data-confirm="Cancel the locked-in session on {{.Label}}? Everyone will be notified.">
 <button class="btn btn-danger" type="submit">Cancel the locked-in session</button>
 </form>{{end}}
 {{end}}

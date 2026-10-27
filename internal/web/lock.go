@@ -79,7 +79,7 @@ func (s *Server) handleCancel(w http.ResponseWriter, r *http.Request, u *store.U
 		s.render(w, http.StatusConflict, "message.html", page{Title: "Can't cancel", Message: "This day has passed.", User: u})
 		return
 	}
-	err := s.db.Unlock(d)
+	err := s.db.Unlock(d, u.ID, s.now())
 	if err != nil && !errors.Is(err, store.ErrNotFound) {
 		s.fail(w, "Couldn't cancel that day.", err)
 		return

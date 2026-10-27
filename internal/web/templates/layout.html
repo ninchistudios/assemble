@@ -17,12 +17,16 @@
 <h1>{{.Group.GroupName}}<span class="slot">{{.Group.SlotStart}}–{{.Group.SlotEnd}} · {{.Group.Timezone}}</span></h1>
 {{if .Local}}<span class="tag env-tag">local</span>{{end}}
 </header>
+{{if .Notices}}<ul class="notices" aria-label="Notifications">
+{{range .Notices}}<li class="notice-{{.Kind}}"><a href="{{.Href}}"><b>{{.Text}}</b>{{if .Meta}} <span class="muted">{{.Meta}}</span>{{end}}</a><form class="dismiss" method="post" action="/notices/{{.ID}}/dismiss"><button type="submit" aria-label="Dismiss">{{template "x-icon"}}</button></form></li>
+{{end}}</ul>{{end}}
 <main>
 {{end}}
 
 {{define "bottom"}}
 </main>
 <footer>assemble {{.Version}}</footer>
+{{if .Notices}}<script src="/static/notices.js" defer></script>{{end}}
 </body>
 </html>
 {{end}}

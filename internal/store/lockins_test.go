@@ -26,10 +26,10 @@ func TestLockinLifecycle(t *testing.T) {
 	if m, _ := s.Lockins("2026-11-01", "2026-11-30"); len(m) != 1 {
 		t.Errorf("Lockins in November = %d, want 1", len(m))
 	}
-	if err := s.Unlock("2026-11-14"); err != nil {
+	if err := s.Unlock("2026-11-14", a.ID, t0); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.Unlock("2026-11-14"); !errors.Is(err, ErrNotFound) {
+	if err := s.Unlock("2026-11-14", a.ID, t0); !errors.Is(err, ErrNotFound) {
 		t.Errorf("second unlock err = %v, want ErrNotFound", err)
 	}
 }

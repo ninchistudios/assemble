@@ -102,6 +102,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /day/{date}/note", s.requireUser(s.handleSetNote))
 	s.mux.HandleFunc("POST /day/{date}/lock", s.requireAdmin(s.handleLock))
 	s.mux.HandleFunc("POST /day/{date}/cancel", s.requireAdmin(s.handleCancel))
+	s.mux.HandleFunc("POST /notices/{id}/dismiss", s.requireUser(s.handleDismiss))
 	s.mux.HandleFunc("GET /style", s.requireAdmin(s.handleStyle))
 
 	// Admin.
@@ -164,7 +165,8 @@ type page struct {
 
 	DayView     *dayView
 	Confirm     *confirmForm
-	StatusIcons []string // icon names, for the day page script to copy
+	Notices     []noticeView // the signed-in member's live notices
+	StatusIcons []string     // icon names, for the day page script to copy
 
 	DevBypass bool
 	Local     bool   // a test copy on this machine: the header says so
@@ -248,6 +250,9 @@ func (s *Server) render(w http.ResponseWriter, status int, name string, p page) 
 	p.DevBypass = s.cfg.DevBypass
 	p.Local = s.cfg.Local()
 	p.Group = s.groupSettings()
+	if p.User != nil {
+		p.Notices = s.noticesFor(p.User)
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
 	if err := s.tpl.ExecuteTemplate(w, name, p); err != nil {

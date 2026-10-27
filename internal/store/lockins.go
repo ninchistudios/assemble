@@ -20,9 +20,15 @@ type Lockin struct {
 // ErrLocked is returned when locking a day that is already locked in.
 var ErrLocked = errors.New("already locked in")
 
-// Lock books a day. override records that not every member was available.
+// Lock books a day and notifies the group, in one transaction. override
+// records that not every member was available.
 func (s *Store) Lock(day cal.Day, by int64, override bool, now time.Time) error {
-	res, err := s.db.Exec(`INSERT INTO lockins (day, locked_by, locked_at, override) VALUES (?, ?, ?, ?) ON CONFLICT (day) DO NOTHING`,
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(`INSERT INTO lockins (day, locked_by, locked_at, override) VALUES (?, ?, ?, ?) ON CONFLICT (day) DO NOTHING`,
 		day, by, Stamp(now), override)
 	if err != nil {
 		return fmt.Errorf("lock: %w", err)
@@ -32,12 +38,29 @@ func (s *Store) Lock(day cal.Day, by int64, override bool, now time.Time) error 
 	} else if n == 0 {
 		return ErrLocked
 	}
-	return nil
+	if err := notify(tx, NoticeLocked, day, by, now); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
-// Unlock cancels a booked day. ErrNotFound if it wasn't locked in.
-func (s *Store) Unlock(day cal.Day) error {
-	res, err := s.db.Exec(`DELETE FROM lockins WHERE day = ?`, day)
+// Unlock cancels a booked day and notifies the group, in one transaction.
+// ErrNotFound if it wasn't locked in.
+func (s *Store) Unlock(day cal.Day, by int64, now time.Time) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := unlock(tx, day, by, now); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// unlock deletes the lock-in and records the cancellation.
+func unlock(tx execer, day cal.Day, by int64, now time.Time) error {
+	res, err := tx.Exec(`DELETE FROM lockins WHERE day = ?`, day)
 	if err != nil {
 		return fmt.Errorf("unlock: %w", err)
 	}
@@ -46,7 +69,7 @@ func (s *Store) Unlock(day cal.Day) error {
 	} else if n == 0 {
 		return ErrNotFound
 	}
-	return nil
+	return notify(tx, NoticeCancelled, day, by, now)
 }
 
 // LockinFor returns the day's lock-in, or ErrNotFound.
@@ -101,7 +124,8 @@ func (s *Store) PullOut(userID int64, day cal.Day, status cal.Status, now time.T
 	if err := setStatus(tx, userID, day, status, now); err != nil {
 		return fmt.Errorf("pull out: %w", err)
 	}
-	if _, err := tx.Exec(`DELETE FROM lockins WHERE day = ?`, day); err != nil {
+	// Someone else may have cancelled it a moment ago; that's fine.
+	if err := unlock(tx, day, userID, now); err != nil && !errors.Is(err, ErrNotFound) {
 		return fmt.Errorf("pull out: %w", err)
 	}
 	return tx.Commit()

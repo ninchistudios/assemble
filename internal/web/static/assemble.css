@@ -299,6 +299,39 @@ input:focus-visible, select:focus-visible { outline: none; border-color: var(--a
 .status-set figure { margin: 0; text-align: center; }
 .status-set figcaption { margin-top: .3rem; font-size: .8rem; font-weight: 750; letter-spacing: .04em; }
 
+/* ---- notices ---------------------------------------------------------------
+   Above the page content on every signed-in page. Locked-in notices take the
+   accent like the lock banner; cancellations take the NO colour. */
+.notices { list-style: none; margin: 0 0 1rem; padding: 0; }
+.notices li {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .3rem .3rem .3rem .9rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+.notices li + li { margin-top: 6px; }
+.notices li.notice-cancelled { box-shadow: inset 4px 0 0 var(--no); }
+.notices a { flex: 1; min-width: 0; color: var(--text); text-decoration: none; font-weight: 600; }
+.notices a b { font-weight: 750; }
+.notices form { margin: 0; }
+.notices button {
+  display: flex;
+  padding: 2px;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.x-icon { width: 30px; height: 30px; }
+.x-icon rect { fill: var(--surface-2); }
+.x-icon path { fill: none; stroke: var(--muted); stroke-width: 4; stroke-linecap: round; }
+
 /* ---- day view -------------------------------------------------------------- */
 .day-head { display: flex; align-items: center; gap: .5rem; margin: .25rem 0 1rem; }
 .day-title { flex: 1; min-width: 0; text-align: center; }
