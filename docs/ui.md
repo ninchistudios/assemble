@@ -33,6 +33,7 @@ The palette is small and distinctive, and it avoids primary colours. Status colo
 | `--ok` | `#e6b450` | saffron | [OK] | 9.4 |
 | `--no` | `#ec7a64` | coral | [NO], destructive actions | 6.4 |
 | `--unknown` | `#6b7280` | slate | [?] | 3.7 |
+| `--env-local` | `#4a2420` | | header band on a local copy (#20) | |
 
 - All text meets WCAG AA (4.5:1).
 - `--unknown` is used only as an icon fill, where the requirement for non-text graphics is 3:1. It is never used for text.
@@ -54,7 +55,8 @@ The palette is small and distinctive, and it avoids primary colours. Status colo
 
 - **Picker:** in a choice of status, the chosen option is filled. The other options are outlined, with the glyph drawn in the status colour. The shape stays the same and only the fill changes.
 - **Sizes:** 48px for anything you tap, 28px (`.small`) for display only.
-- **Where they live:** `templates/icons.html` (`status`, `status-off`, `mark`). The favicon `static/icon.svg` repeats the mark with literal colours, because a favicon can't read CSS variables.
+- **Other icons, same frame:** a padlock (`lock-icon`) for locked-in days, filled with `--accent`; a cross (`x-icon`) to dismiss a notice. The footer's GitHub mark (`github-icon`, from Octicons) is the one exception to the square frame, because it's GitHub's own mark.
+- **Where they live:** `templates/icons.html` (`status`, `status-off`, `mark`, `lock-icon`, `x-icon`, `github-icon`). The favicon `static/icon.svg` repeats the mark with literal colours, because a favicon can't read CSS variables.
 
 ## Typography
 
@@ -82,3 +84,12 @@ All of these are shown on `/style`.
 - **Rows:** `.rows > li`, a `--surface` card with an optional leading icon, a growing text block with a `.meta` line underneath, and a trailing `.tag`.
 - **Notices:** `.notice` with a coloured left edge: accent for information, `.ok` for success, `.error` for problems.
 - **Tabs:** `.tabs` for switching between admin sections. The current tab is marked with `aria-current="page"`.
+
+The calendar adds these (2026.2):
+
+- **Status picker:** `.picker`, four equal buttons with the status icon at 56px. Each button holds both the filled and outlined icon. `aria-pressed` decides which shows, so the script changes one attribute and the page never redraws.
+- **Group list:** `.rows.group`, one row per member with a 32px status icon, their name, their note as `.meta` and the status word. The viewer's own row has an accent edge.
+- **Lock banner:** `.lock-banner`, an accent outline with the padlock. Locked-in is a booking, not anyone's answer, so it uses the accent rather than a status colour.
+- **Notices:** `.notices`, at the top of every signed-in page. Locked-in notices have an accent edge and cancellations a coral one. Each has a 44px dismiss target.
+- **Upcoming rows:** `.up-row`, the date, a `.bar` of one equal segment per member (yes, ok, no, ? in that order, so no inline widths) and the viewer's own status. A wisteria outline means locked in; a sage outline means everyone can make it.
+- **Local band:** `body.env-local` gives the header a full-width `--env-local` band and a coral **LOCAL** tag when the base URL is localhost.
