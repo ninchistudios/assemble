@@ -1,0 +1,18 @@
+# Local, non-public notes and config. Never commit.
+local-private/
+*.local.md
+# .env.* matters: plain ".env" and "*.env" both miss ".env.production".
+.env
+.env.*
+*.env
+!.env.example
+docker-compose.yml
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# Build output
+/assemble
+/assemble.exe
+/dist/
