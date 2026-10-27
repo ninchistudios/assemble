@@ -522,3 +522,6 @@ footer .source:hover, footer .source:focus-visible { color: var(--text); }
 .legal ul { padding-left: 1.2rem; margin: 0 0 1rem; }
 .legal li + li { margin-top: .5rem; }
 .legal-links { font-size: .85rem; margin-top: 1rem; }
+
+.signed-in .me { color: var(--text); font-weight: 650; }
+.signed-in a { margin-left: .35rem; font-size: .8rem; }

@@ -46,6 +46,6 @@
 {{if .User.IsAdmin}}<a href="/admin">Admin</a>{{end}}
 <form method="post" action="/auth/logout"><button type="submit" class="link">Sign out</button></form>
 </nav>
-<p class="muted signed-in">Signed in as <a href="/profile">{{.User.Name}}</a></p>
+<p class="muted signed-in">Signed in as <span class="me">{{.User.Name}}</span> <a href="/profile">change display name</a></p>
 <script src="/static/day.js" defer></script>
 {{template "bottom" .}}{{end}}

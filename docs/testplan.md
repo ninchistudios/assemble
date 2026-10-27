@@ -121,7 +121,7 @@ Admin and member each on their own device or browser.
 |---|---|---|
 | K1 | **Upcoming** from the day view | Two months of days under month headings. Each row has a bar of everyone's answers and your own status. Locked-in days have a padlock and a wisteria outline; days everyone can make have a green outline. |
 | K2 | Tap a row | That day opens. |
-| K3 | Tap your name under **Signed in as**. Set a display name and save | **Saved**. The group list and other members now show the new name. |
+| K3 | Tap **change display name** next to **Signed in as**. Set a display name and save | **Saved**. The group list and other members now show the new name. |
 | K4 | Sign out and back in | The display name is kept, not replaced by your Google name. |
 | K5 | Clear the display name | Back to your Google name. |
 | K6 | Signed out, open `/privacy` and `/terms` | Both load without sign-in. The sign-in and join pages link to them. |
