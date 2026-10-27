@@ -196,17 +196,24 @@ func TestDevLoginAbsentWithoutBypass(t *testing.T) {
 	}
 }
 
-func TestDevLoginUsesTheSameRules(t *testing.T) {
-	e := newEnv(t, func(c *config.Config) {
+func devEnv(t *testing.T) *testEnv {
+	return newEnv(t, func(c *config.Config) {
 		c.BaseURL = "http://localhost:8138"
 		c.DevBypass = true
 	})
+}
+
+func TestDevLoginUsesTheSameRules(t *testing.T) {
+	e := devEnv(t)
 	post := func(email string) *http.Cookie {
 		req := httptestForm("/auth/dev", "http://localhost:8138", url.Values{"email": {email}})
+		req.Host = "localhost:8138"
 		rec := e.serve(req)
 		return cookie(rec, auth.SessionCookie)
 	}
-	if rec := e.get(t, "/auth/login"); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "Google is bypassed") {
+	login := httptestRequest(http.MethodGet, "/auth/login", "")
+	login.Host = "localhost:8138"
+	if rec := e.serve(login); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "Google is bypassed") {
 		t.Fatalf("GET /auth/login under bypass = %d", rec.Code)
 	}
 	if c := post(testAdminEmail); c == nil {
@@ -214,5 +221,31 @@ func TestDevLoginUsesTheSameRules(t *testing.T) {
 	}
 	if c := post("stranger@example.com"); c != nil {
 		t.Error("dev sign-in let a stranger in")
+	}
+}
+
+// A bypass instance wrongly exposed through a proxy: the attacker forges the
+// Origin, but the Host is the public name the proxy forwards.
+func TestDevLoginRefusedOffLoopback(t *testing.T) {
+	e := devEnv(t)
+	for _, host := range []string{"assemble.example.com", "192.168.1.20:8138", "localhost.example.com"} {
+		req := httptestForm("/auth/dev", "http://localhost:8138", url.Values{"email": {testAdminEmail}})
+		req.Host = host
+		rec := e.serve(req)
+		if rec.Code != http.StatusNotFound || cookie(rec, auth.SessionCookie) != nil {
+			t.Errorf("dev sign-in via Host %q = %d", host, rec.Code)
+		}
+		login := httptestRequest(http.MethodGet, "/auth/login", "")
+		login.Host = host
+		if rec := e.serve(login); rec.Code != http.StatusNotFound {
+			t.Errorf("dev login page via Host %q = %d", host, rec.Code)
+		}
+	}
+	for _, host := range []string{"127.0.0.1:8138", "[::1]:8138", "localhost"} {
+		req := httptestForm("/auth/dev", "http://localhost:8138", url.Values{"email": {testAdminEmail}})
+		req.Host = host
+		if rec := e.serve(req); rec.Code != http.StatusSeeOther {
+			t.Errorf("dev sign-in via loopback Host %q = %d", host, rec.Code)
+		}
 	}
 }

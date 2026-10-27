@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -72,7 +73,9 @@ func (s *Server) requireAdmin(next userHandler) http.HandlerFunc {
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	if s.cfg.DevBypass {
-		s.render(w, http.StatusOK, "devlogin.html", page{Title: "Dev sign-in"})
+		s.localOnly(func(w http.ResponseWriter, r *http.Request) {
+			s.render(w, http.StatusOK, "devlogin.html", page{Title: "Dev sign-in"})
+		})(w, r)
 		return
 	}
 	state, err := auth.NewState()
@@ -109,6 +112,28 @@ func (s *Server) handleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.signIn(w, r, ui)
+}
+
+// localOnly serves the dev sign-in only to requests addressed to this machine
+// by a loopback name. config.Load already refuses the bypass unless the base
+// URL is localhost, but that is a statement about configuration, not about
+// who can reach the port: a misconfigured instance behind a proxy would
+// otherwise hand anyone who forges an Origin header any account they like.
+// Through a proxy the Host is the public name, so this fails closed.
+func (s *Server) localOnly(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		host := r.Host
+		if h, _, err := net.SplitHostPort(host); err == nil {
+			host = h
+		}
+		switch strings.Trim(host, "[]") {
+		case "localhost", "127.0.0.1", "::1":
+			next(w, r)
+		default:
+			s.refusals.Printf("refused dev sign-in for host %q", r.Host)
+			s.notFound(w)
+		}
+	}
 }
 
 // handleDevLogin stands in for Google under the bypass: the typed email
@@ -149,7 +174,7 @@ func (s *Server) signIn(w http.ResponseWriter, r *http.Request, ui auth.UserInfo
 	switch {
 	case err == nil:
 		if !u.Enabled {
-			log.Printf("auth: refused disabled user=%d", u.ID)
+			s.refusals.Printf("auth: refused disabled user=%d", u.ID)
 			s.render(w, http.StatusForbidden, "denied.html", page{Title: "Access turned off", Email: ui.Email,
 				Message: "The admin has turned off your access to this group."})
 			return
@@ -176,7 +201,7 @@ func (s *Server) signIn(w http.ResponseWriter, r *http.Request, ui auth.UserInfo
 			return
 		}
 		if taken {
-			log.Printf("auth: refused admin bootstrap for sub=%s: email already belongs to another account", ui.Sub)
+			s.refusals.Printf("auth: refused admin bootstrap for sub=%s: email already belongs to another account", ui.Sub)
 			s.deny(w, ui)
 			return
 		}
@@ -190,7 +215,7 @@ func (s *Server) signIn(w http.ResponseWriter, r *http.Request, ui auth.UserInfo
 		// The link may have been disabled while they were at Google.
 		inv, err := s.db.ActiveInvite(inviteToken)
 		if errors.Is(err, store.ErrNotFound) {
-			log.Printf("auth: refused sub=%s: invite no longer active", ui.Sub)
+			s.refusals.Printf("auth: refused sub=%s: invite no longer active", ui.Sub)
 			s.render(w, http.StatusForbidden, "denied.html", page{Title: "Invite no longer valid", Email: ui.Email,
 				Message: "The invite link you used has been disabled. Ask your group's admin for a new one."})
 			return
@@ -206,7 +231,7 @@ func (s *Server) signIn(w http.ResponseWriter, r *http.Request, ui auth.UserInfo
 		log.Printf("auth: user=%d joined via invite=%d", u.ID, inv.ID)
 
 	case errors.Is(err, store.ErrNotFound):
-		log.Printf("auth: refused sub=%s: not a member", ui.Sub)
+		s.refusals.Printf("auth: refused sub=%s: not a member", ui.Sub)
 		s.deny(w, ui)
 		return
 

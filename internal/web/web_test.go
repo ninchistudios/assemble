@@ -244,6 +244,25 @@ func TestReferrerPolicyKeepsSameOriginPosts(t *testing.T) {
 	}
 }
 
+func TestStaticServesOnlyKnownFiles(t *testing.T) {
+	e := newEnv(t)
+	for _, p := range []string{"/static/", "/static/fonts/", "/static/nope.css"} {
+		if rec := e.get(t, p); rec.Code != http.StatusNotFound {
+			t.Errorf("GET %s = %d, want 404", p, rec.Code)
+		}
+	}
+}
+
+func TestOversizedBodyRefused(t *testing.T) {
+	e := newEnv(t)
+	admin := e.session(t, adminID)
+	big := url.Values{"group_name": {strings.Repeat("x", maxBody)}}
+	rec := e.do(t, http.MethodPost, "/admin/group", big, admin)
+	if rec.Code != http.StatusRequestEntityTooLarge {
+		t.Errorf("oversized POST = %d, want 413", rec.Code)
+	}
+}
+
 // The font is self-hosted; a wrong content type makes some browsers refuse it
 // and fall back silently to the system sans.
 func TestFontServedAsWoff2(t *testing.T) {

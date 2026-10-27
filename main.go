@@ -57,6 +57,9 @@ func main() {
 		IdleTimeout:       120 * time.Second,
 	}
 
+	if cfg.DevBypass {
+		log.Printf("WARNING: ASSEMBLE_DEV_BYPASS is on - Google sign-in is replaced by a test form that signs in as any email. Never use this on a server.")
+	}
 	log.Printf("assemble %s listening on %s for %s", cfg.Version, cfg.Listen, cfg.BaseURL)
 	if err := srv.ListenAndServe(); err != nil {
 		log.Fatalf("serve: %v", err)

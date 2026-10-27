@@ -91,6 +91,23 @@ All configuration is environment variables. Group settings (name, timeslot, time
 
 There's no session secret to manage. Sessions are random tokens stored hashed in the database, so restarts and image updates never sign anyone out.
 
+## Hardening
+
+These are suggestions for anyone running `assemble` on a server reachable from the internet. They're ordinary Docker and reverse-proxy practice; none of them is specific to this app. The example compose file already applies the container settings.
+
+- **Keep the container off the internet.** Put the app behind a reverse proxy that terminates TLS, and don't publish its port. If you must publish one, bind it to `127.0.0.1`. Turn on HSTS at the proxy.
+- **Restrict the container.** The app writes only to its data volume. Run it with:
+  - a read-only root filesystem (`read_only: true`, with a `tmpfs` for `/tmp`)
+  - no Linux capabilities (`cap_drop: [ALL]`)
+  - `no-new-privileges`
+  - modest memory and process limits
+- **Rotate logs.** Docker's default log driver keeps container logs forever. Set `max-size` and `max-file`, as the example compose file does.
+- **Keep the image current.** Pin a release tag and update it deliberately. Rebuilding or pulling picks up Go and base-image security fixes, so don't leave an image unchanged for many months.
+- **Protect the secrets.** `.env` holds the OAuth client secret, so make it readable only by its owner (`chmod 600 .env`). Rotate the secret in Google Cloud if it is ever exposed.
+- **Protect the backups.** They contain members' names and email addresses. Store them as you would any personal data.
+- **Never set `ASSEMBLE_DEV_BYPASS` on a server.** It replaces Google sign-in with a test form.
+- **Watch the logs now and then.** Refused sign-ins and rejected requests are logged, so a sudden run of them is worth a look.
+
 ## Development
 
 You need Go 1.25 or later.

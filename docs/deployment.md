@@ -46,6 +46,7 @@ The example compose file has the important parts already:
 - `ASSEMBLE_DB_PATH=/data/assemble.db`
 - a healthcheck
 - no published port
+- the container restrictions and log rotation suggested in the [README's Hardening section](../README.md#hardening)
 
 ```sh
 docker compose up -d

@@ -5,11 +5,13 @@ import (
 	"crypto/sha256"
 	"embed"
 	"encoding/hex"
+	"errors"
 	"html/template"
 	"io/fs"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/ninchistudios/assemble/internal/auth"
 	"github.com/ninchistudios/assemble/internal/config"
@@ -30,7 +32,14 @@ type Server struct {
 	mux     *http.ServeMux
 	handler http.Handler
 	etags   map[string]string // /static/<file> -> content hash
+
+	// refusals rate-limits the log lines strangers can cause.
+	refusals *logLimiter
 }
+
+// maxBody caps a request body. The largest real form is the group settings,
+// a few hundred bytes.
+const maxBody = 64 << 10
 
 func New(cfg config.Config, db *store.Store) (*Server, error) {
 	tpl, err := template.ParseFS(templateFS, "templates/*.html")
@@ -49,12 +58,13 @@ func New(cfg config.Config, db *store.Store) (*Server, error) {
 			ClientSecret: cfg.GoogleClientSecret,
 			RedirectURL:  cfg.RedirectURL(),
 		},
-		tpl:   tpl,
-		mux:   http.NewServeMux(),
-		etags: etags,
+		tpl:      tpl,
+		mux:      http.NewServeMux(),
+		etags:    etags,
+		refusals: newLogLimiter(20, time.Hour),
 	}
 	s.routes()
-	s.handler = securityHeaders(s.sameOrigin(s.mux))
+	s.handler = securityHeaders(s.sameOrigin(limitBody(s.mux)))
 	return s, nil
 }
 
@@ -83,7 +93,7 @@ func (s *Server) routes() {
 	// Registered only under the bypass, which config.Load refuses to enable
 	// anywhere but http://localhost, so this cannot exist in production.
 	if s.cfg.DevBypass {
-		s.mux.HandleFunc("POST /auth/dev", s.handleDevLogin)
+		s.mux.HandleFunc("POST /auth/dev", s.localOnly(s.handleDevLogin))
 	}
 
 	// Unauthenticated. Liveness plus the build, so a deploy can be confirmed
@@ -102,9 +112,7 @@ func (s *Server) routes() {
 	s.mux.Handle("GET /static/", s.staticHandler())
 
 	// Everything else is a styled 404 rather than the mux's plain-text one.
-	s.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		s.render(w, http.StatusNotFound, "message.html", page{Title: "Not found", Message: "There's nothing here."})
-	})
+	s.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { s.notFound(w) })
 }
 
 // page is the data every template receives.
@@ -171,8 +179,27 @@ func (s *Server) sameOrigin(next http.Handler) http.Handler {
 		ok := origin == s.cfg.BaseURL ||
 			(origin == "" && strings.HasPrefix(r.Header.Get("Referer"), s.cfg.BaseURL+"/"))
 		if !ok {
-			log.Printf("refused %s %s from origin %q", r.Method, r.URL.Path, origin)
+			s.refusals.Printf("refused %s %s from origin %q", r.Method, r.URL.Path, origin)
 			s.render(w, http.StatusForbidden, "message.html", page{Title: "Not allowed", Message: "That request didn't come from this site."})
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// limitBody caps request bodies and parses forms up front, so an oversized
+// body is refused here rather than silently read as an empty form by
+// FormValue further in.
+func limitBody(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, maxBody)
+		if err := r.ParseForm(); err != nil {
+			status := http.StatusBadRequest
+			var tooBig *http.MaxBytesError
+			if errors.As(err, &tooBig) {
+				status = http.StatusRequestEntityTooLarge
+			}
+			http.Error(w, http.StatusText(status), status)
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -224,18 +251,26 @@ func staticETags() (map[string]string, error) {
 
 // staticHandler serves the embedded assets with a validator, letting
 // http.ServeContent answer a matching If-None-Match with a bodyless 304.
+// Only files known at startup are served: no directory listings.
 func (s *Server) staticHandler() http.Handler {
 	files := http.FileServerFS(staticFS)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if tag, ok := s.etags[r.URL.Path]; ok {
-			w.Header().Set("ETag", tag)
-			// Revalidate every time rather than trusting a max-age: a stale
-			// stylesheet surviving a redeploy looks like a rendering bug and is
-			// very hard to recognise as a caching one.
-			w.Header().Set("Cache-Control", "no-cache")
+		tag, ok := s.etags[r.URL.Path]
+		if !ok {
+			s.notFound(w)
+			return
 		}
+		w.Header().Set("ETag", tag)
+		// Revalidate every time rather than trusting a max-age: a stale
+		// stylesheet surviving a redeploy looks like a rendering bug and is
+		// very hard to recognise as a caching one.
+		w.Header().Set("Cache-Control", "no-cache")
 		files.ServeHTTP(w, r)
 	})
+}
+
+func (s *Server) notFound(w http.ResponseWriter) {
+	s.render(w, http.StatusNotFound, "message.html", page{Title: "Not found", Message: "There's nothing here."})
 }
 
 func (s *Server) handleHome(w http.ResponseWriter, r *http.Request, u *store.User) {
