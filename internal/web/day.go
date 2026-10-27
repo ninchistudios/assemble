@@ -184,16 +184,70 @@ func (s *Server) handleSetStatus(w http.ResponseWriter, r *http.Request, u *stor
 		s.answer(w, r, d, http.StatusConflict, "This day has passed, so it can't be changed.")
 		return
 	}
-	if err := s.db.SetStatus(u.ID, d, st, s.now()); err != nil {
+
+	// Pulling out of a locked-in day cancels it, so ask first.
+	cancels, err := s.wouldCancel(u, d, st)
+	if err != nil {
 		log.Printf("set status user=%d day=%s: %v", u.ID, d, err)
 		s.answer(w, r, d, http.StatusInternalServerError, "Couldn't save that. Please try again.")
 		return
 	}
+	if cancels && r.FormValue("confirm") != "1" {
+		s.askToPullOut(w, r, u, d, st)
+		return
+	}
+	if cancels {
+		err = s.db.PullOut(u.ID, d, st, s.now())
+	} else {
+		err = s.db.SetStatus(u.ID, d, st, s.now())
+	}
+	if err != nil {
+		log.Printf("set status user=%d day=%s: %v", u.ID, d, err)
+		s.answer(w, r, d, http.StatusInternalServerError, "Couldn't save that. Please try again.")
+		return
+	}
+	if cancels {
+		log.Printf("calendar: user=%d pulled out of %s, cancelling it", u.ID, d)
+	}
 	if wantsJSON(r) {
-		writeJSON(w, http.StatusOK, map[string]string{"status": st.Icon()})
+		writeJSON(w, http.StatusOK, map[string]any{"status": st.Icon(), "cancelled": cancels})
 		return
 	}
 	http.Redirect(w, r, dayPath(d), http.StatusSeeOther)
+}
+
+// pullOutWarning is the question asked before a change cancels a booking.
+const pullOutWarning = "This will cancel the locked-in session. Are you sure?"
+
+// wouldCancel reports whether setting st on d pulls u out of a locked-in
+// day: the day is locked and u goes from [YES]/[OK] to [NO]/[?].
+func (s *Server) wouldCancel(u *store.User, d cal.Day, st cal.Status) (bool, error) {
+	if _, err := s.db.LockinFor(d); errors.Is(err, store.ErrNotFound) {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+	current, err := s.db.Status(u.ID, d)
+	if err != nil {
+		return false, err
+	}
+	return cal.Cancels(current, st), nil
+}
+
+// askToPullOut asks for the confirm: the script gets JSON to show confirm()
+// with, a plain form gets a page with a button that resends with confirm=1.
+func (s *Server) askToPullOut(w http.ResponseWriter, r *http.Request, u *store.User, d cal.Day, st cal.Status) {
+	if wantsJSON(r) {
+		writeJSON(w, http.StatusConflict, map[string]string{"confirm": pullOutWarning})
+		return
+	}
+	s.render(w, http.StatusConflict, "confirm.html", page{
+		Title:   "Cancel the locked-in session?",
+		Message: "You're changing to " + st.Label() + " on " + d.Short() + ", which is locked in. " + pullOutWarning,
+		User:    u,
+		Confirm: &confirmForm{Action: dayPath(d) + "/status", Fields: map[string]string{"status": st.Icon(), "confirm": "1"},
+			Button: "Yes, cancel it", Back: dayPath(d)},
+	})
 }
 
 // handleSetNote sets the signed-in member's public note for a day. Like

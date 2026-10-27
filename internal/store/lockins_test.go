@@ -33,3 +33,19 @@ func TestLockinLifecycle(t *testing.T) {
 		t.Errorf("second unlock err = %v, want ErrNotFound", err)
 	}
 }
+
+func TestPullOutCancelsInOneGo(t *testing.T) {
+	s := newStore(t)
+	a, _ := s.CreateUser("sub-a", "a@example.com", "A", RoleAdmin, 0, t0)
+	s.SetStatus(a.ID, "2026-11-14", "yes", t0)
+	s.Lock("2026-11-14", a.ID, false, t0)
+	if err := s.PullOut(a.ID, "2026-11-14", "no", t0); err != nil {
+		t.Fatal(err)
+	}
+	if st, _ := s.Status(a.ID, "2026-11-14"); st != "no" {
+		t.Errorf("status after pulling out = %q", st)
+	}
+	if _, err := s.LockinFor("2026-11-14"); !errors.Is(err, ErrNotFound) {
+		t.Error("still locked in after pulling out")
+	}
+}

@@ -20,11 +20,20 @@ type Answer struct {
 // SetStatus records a member's status for a day. Setting cal.Unknown removes
 // the answer, note included: [?] is the absence of a row.
 func (s *Store) SetStatus(userID int64, day cal.Day, status cal.Status, now time.Time) error {
+	return setStatus(s.db, userID, day, status, now)
+}
+
+// execer is what setStatus needs from either the database or a transaction.
+type execer interface {
+	Exec(query string, args ...any) (sql.Result, error)
+}
+
+func setStatus(db execer, userID int64, day cal.Day, status cal.Status, now time.Time) error {
 	if status == cal.Unknown {
-		_, err := s.db.Exec(`DELETE FROM availability WHERE user_id = ? AND day = ?`, userID, day)
+		_, err := db.Exec(`DELETE FROM availability WHERE user_id = ? AND day = ?`, userID, day)
 		return err
 	}
-	_, err := s.db.Exec(`
+	_, err := db.Exec(`
 INSERT INTO availability (user_id, day, status, updated_at) VALUES (?, ?, ?, ?)
 ON CONFLICT (user_id, day) DO UPDATE SET status = excluded.status, updated_at = excluded.updated_at`,
 		userID, day, status, Stamp(now))

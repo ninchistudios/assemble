@@ -88,3 +88,21 @@ func (s *Store) Lockins(first, last cal.Day) (map[cal.Day]Lockin, error) {
 	}
 	return out, rows.Err()
 }
+
+// PullOut records a member's new status on a locked-in day and cancels the
+// lock-in, in one transaction: there is never a moment where the member has
+// pulled out but the day still shows as booked, or the reverse.
+func (s *Store) PullOut(userID int64, day cal.Day, status cal.Status, now time.Time) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := setStatus(tx, userID, day, status, now); err != nil {
+		return fmt.Errorf("pull out: %w", err)
+	}
+	if _, err := tx.Exec(`DELETE FROM lockins WHERE day = ?`, day); err != nil {
+		return fmt.Errorf("pull out: %w", err)
+	}
+	return tx.Commit()
+}

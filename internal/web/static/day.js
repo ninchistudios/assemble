@@ -47,15 +47,32 @@ if (picker && picker.getAttribute("aria-disabled") !== "true") {
     // Show the choice at once; put it back if the server says no.
     select(btn.value);
     showError("");
-    try {
+    const send = async (confirmed) => {
       const body = new URLSearchParams({ status: btn.value });
+      if (confirmed) body.set("confirm", "1");
       const res = await fetch(picker.action, {
         method: "POST",
         headers: { Accept: "application/json" },
         body,
       });
-      const data = await res.json().catch(() => ({}));
+      return [res, await res.json().catch(() => ({}))];
+    };
+    try {
+      let [res, data] = await send(false);
+      // Pulling out of a locked-in day cancels it: the server asks first.
+      if (res.status === 409 && data.confirm) {
+        if (!confirm(data.confirm)) {
+          select(previous ? previous.value : "");
+          return;
+        }
+        [res, data] = await send(true);
+      }
       if (!res.ok) throw new Error(data.error || "Couldn't save that. Please try again.");
+      if (data.cancelled) {
+        // The banner, the admin's buttons and everyone's view change.
+        location.reload();
+        return;
+      }
       select(data.status);
       showMine(data.status);
       // A note goes with an answer: offered once there is one, and gone

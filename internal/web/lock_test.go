@@ -1,6 +1,7 @@
 package web
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
@@ -82,5 +83,96 @@ func TestLockIsAdminOnlyAndNotInThePast(t *testing.T) {
 	}
 	if body := e.get(t, "/day/2026-11-13", admin).Body.String(); strings.Contains(body, "/lock") {
 		t.Error("a past day offers lock-in")
+	}
+}
+
+// lockedDay sets up 2026-11-20 locked in with the admin and Jo at the given
+// statuses, returning Jo's session.
+func lockedDay(t *testing.T, e *testEnv, admin *http.Cookie, adminSt, joSt string) *http.Cookie {
+	t.Helper()
+	_, jo := e.memberSession(t, "jo")
+	e.do(t, http.MethodPost, "/day/2026-11-20/status", url.Values{"status": {adminSt}}, admin)
+	if joSt != "unknown" {
+		e.do(t, http.MethodPost, "/day/2026-11-20/status", url.Values{"status": {joSt}}, jo)
+	}
+	e.do(t, http.MethodPost, "/day/2026-11-20/lock", url.Values{"override": {"1"}}, admin)
+	if _, err := e.db.LockinFor("2026-11-20"); err != nil {
+		t.Fatal("setup didn't lock the day")
+	}
+	return jo
+}
+
+func setStatusJSON(e *testEnv, c *http.Cookie, status string, confirm bool) (int, map[string]any) {
+	form := url.Values{"status": {status}}
+	if confirm {
+		form.Set("confirm", "1")
+	}
+	req := httptestForm("/day/2026-11-20/status", testBase, form, c)
+	req.Header.Set("Accept", "application/json")
+	rec := e.serve(req)
+	var body map[string]any
+	json.Unmarshal(rec.Body.Bytes(), &body)
+	return rec.Code, body
+}
+
+func TestPullingOutAsksThenCancels(t *testing.T) {
+	e, admin := dayEnv(t)
+	jo := lockedDay(t, e, admin, "yes", "ok")
+
+	code, body := setStatusJSON(e, jo, "no", false)
+	if code != http.StatusConflict || body["confirm"] != pullOutWarning {
+		t.Fatalf("pull out without confirm = %d %v", code, body)
+	}
+	joUser, _ := e.db.UserBySub("jo")
+	if st, _ := e.db.Status(joUser.ID, "2026-11-20"); st != "ok" {
+		t.Error("status changed before the confirm")
+	}
+	if _, err := e.db.LockinFor("2026-11-20"); err != nil {
+		t.Error("lock-in gone before the confirm")
+	}
+
+	code, body = setStatusJSON(e, jo, "no", true)
+	if code != http.StatusOK || body["cancelled"] != true {
+		t.Fatalf("confirmed pull out = %d %v", code, body)
+	}
+	if _, err := e.db.LockinFor("2026-11-20"); !errors.Is(err, store.ErrNotFound) {
+		t.Error("still locked in after pulling out")
+	}
+}
+
+func TestOnlyPullingOutCancels(t *testing.T) {
+	e, admin := dayEnv(t)
+	jo := lockedDay(t, e, admin, "yes", "no") // override: Jo was already NO
+
+	for _, tc := range []struct {
+		who    *http.Cookie
+		status string
+	}{
+		{jo, "unknown"}, // NO -> ?: not pulling out
+		{admin, "ok"},   // YES -> OK: still available
+	} {
+		if code, body := setStatusJSON(e, tc.who, tc.status, false); code != http.StatusOK || body["cancelled"] != false {
+			t.Errorf("change to %s = %d %v", tc.status, code, body)
+		}
+	}
+	if _, err := e.db.LockinFor("2026-11-20"); err != nil {
+		t.Error("a change that isn't pulling out cancelled the day")
+	}
+}
+
+// Without JS the server shows its own confirm page.
+func TestPullingOutByFormGetsAConfirmPage(t *testing.T) {
+	e, admin := dayEnv(t)
+	jo := lockedDay(t, e, admin, "yes", "yes")
+	rec := e.do(t, http.MethodPost, "/day/2026-11-20/status", url.Values{"status": {"no"}}, jo)
+	if rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), `name="confirm" value="1"`) {
+		t.Fatalf("form pull out = %d", rec.Code)
+	}
+	rec = e.do(t, http.MethodPost, "/day/2026-11-20/status", url.Values{"status": {"no"}, "confirm": {"1"}}, jo)
+	if rec.Code != http.StatusSeeOther {
+		t.Fatalf("confirmed form pull out = %d", rec.Code)
+	}
+	if _, err := e.db.LockinFor("2026-11-20"); !errors.Is(err, store.ErrNotFound) {
+		t.Error("still locked in")
 	}
 }
