@@ -447,7 +447,11 @@ button.link {
    member, so no inline widths), my status, and a padlock if booked. */
 .upcoming { list-style: none; margin: 0 0 1rem; padding: 0; }
 .upcoming .month { margin: 1.25rem 0 .4rem; color: var(--muted); font-size: .85rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
-.upcoming .month:first-child { margin-top: .25rem; }
+.upcoming .up-head + .month { margin-top: .5rem; }
+/* Column headings, laid out like a row so they sit over their columns. */
+.up-head { display: flex; align-items: flex-end; gap: .6rem; padding: 0 .6rem; color: var(--muted); font-size: .75rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
+.up-head .bar-head { flex: 1; min-width: 0; }
+.up-head .mine-head { width: 28px; flex: none; text-align: center; }
 .up-row {
   display: flex;
   align-items: center;

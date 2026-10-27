@@ -13,8 +13,8 @@ type upcomingRow struct {
 	Short        string
 	Month        string // set on the first row of each month, for a heading
 	IsToday      bool
-	Counts       [4]int   // yes, ok, no, unknown
-	Segments     []string // one per member, in that order, for the bar
+	Counts       [4]int   // the other members: yes, ok, no, unknown
+	Segments     []string // one per other member, in that order, for the bar
 	Mine         cal.Status
 	Locked       bool
 	AllAvailable bool
@@ -48,13 +48,22 @@ func (s *Server) handleUpcoming(w http.ResponseWriter, r *http.Request, u *store
 		if m := d.MonthLabel(); m != month {
 			row.Month, month = m, m
 		}
-		enabled := 0
+		// The bar is everyone else; my own answer has its own column. Whether
+		// the day works for everyone still counts me.
+		enabled, in := 0, 0
 		for _, m := range users {
 			if !m.Enabled {
 				continue
 			}
 			enabled++
-			switch answers[d][m.ID].Status {
+			st := answers[d][m.ID].Status
+			if st.Available() {
+				in++
+			}
+			if m.ID == u.ID {
+				continue
+			}
+			switch st {
 			case cal.Yes:
 				row.Counts[0]++
 			case cal.OK:
@@ -65,7 +74,7 @@ func (s *Server) handleUpcoming(w http.ResponseWriter, r *http.Request, u *store
 				row.Counts[3]++
 			}
 		}
-		row.AllAvailable = enabled > 0 && row.Counts[0]+row.Counts[1] == enabled
+		row.AllAvailable = enabled > 0 && in == enabled
 		for i, name := range []string{"yes", "ok", "no", "unknown"} {
 			for range row.Counts[i] {
 				row.Segments = append(row.Segments, name)

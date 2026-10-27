@@ -37,7 +37,12 @@ func TestUpcoming(t *testing.T) {
 	if !strings.Contains(body, `class="up-row locked" href="/day/2026-11-22"`) {
 		t.Error("a locked-in day isn't marked")
 	}
-	if !strings.Contains(body, `aria-label="0 yes, 0 ok, 1 no, 1 not answered"`) {
-		t.Error("the 21st's counts are wrong")
+	// Jo is viewing, so the bar is the others: just the admin, who didn't
+	// answer the 21st. Jo's own NO is in the "you" column.
+	if !strings.Contains(body, `aria-label="0 yes, 0 ok, 0 no, 1 not answered"`) {
+		t.Error("the 21st's bar isn't just the others")
+	}
+	if !strings.Contains(body, `class="bar-head">Others<`) || !strings.Contains(body, `class="mine-head">You<`) {
+		t.Error("no Others / You column headings")
 	}
 }
