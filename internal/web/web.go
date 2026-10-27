@@ -64,6 +64,11 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /{$}", s.requireUser(s.handleHome))
 	s.mux.HandleFunc("GET /style", s.requireAdmin(s.handleStyle))
 
+	// Admin.
+	s.mux.HandleFunc("GET /admin", s.requireAdmin(s.handleAdmin))
+	s.mux.HandleFunc("GET /admin/group", s.requireAdmin(s.handleGroup))
+	s.mux.HandleFunc("POST /admin/group", s.requireAdmin(s.handleGroupPost))
+
 	// Sign-in flow.
 	s.mux.HandleFunc("GET /auth/login", s.handleLogin)
 	s.mux.HandleFunc("GET /auth/callback", s.handleCallback)
@@ -101,7 +106,14 @@ type page struct {
 	Version string
 	Message string
 	Error   string
-	User    *store.User // nil when signed out
+	User    *store.User    // nil when signed out
+	Group   store.Settings // header: group name and timeslot
+	Tab     string         // current admin tab
+
+	// Admin forms.
+	Form  store.Settings
+	Zones []string
+	Saved bool
 
 	DevBypass bool
 	Email     string // the account that was refused, on the denied page
@@ -159,6 +171,7 @@ func (s *Server) sameOrigin(next http.Handler) http.Handler {
 func (s *Server) render(w http.ResponseWriter, status int, name string, p page) {
 	p.Version = s.cfg.Version
 	p.DevBypass = s.cfg.DevBypass
+	p.Group = s.groupSettings()
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
 	if err := s.tpl.ExecuteTemplate(w, name, p); err != nil {
@@ -219,5 +232,5 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request, u *store.Use
 // handleStyle shows the palette, type and icons on a real device. See
 // docs/ui.md.
 func (s *Server) handleStyle(w http.ResponseWriter, r *http.Request, u *store.User) {
-	s.render(w, http.StatusOK, "style.html", page{Title: "Style", User: u})
+	s.render(w, http.StatusOK, "style.html", page{Title: "Style", Tab: "style", User: u})
 }

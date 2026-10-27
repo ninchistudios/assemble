@@ -1,0 +1,121 @@
+package web
+
+import (
+	"log"
+	"net/http"
+	"strings"
+	"time"
+	"unicode/utf8"
+
+	"github.com/ninchistudios/assemble/internal/store"
+)
+
+// maxGroupName keeps the header to a line or two on a 360px phone.
+const maxGroupName = 60
+
+// zones are offered as suggestions on the settings form. Any IANA name is
+// accepted; these just save typing for the likely ones. Australia and New
+// Zealand are listed in full because their states differ on daylight saving.
+var zones = []string{
+	"UTC",
+	"Australia/Adelaide", "Australia/Brisbane", "Australia/Darwin", "Australia/Hobart",
+	"Australia/Melbourne", "Australia/Perth", "Australia/Sydney",
+	"Pacific/Auckland",
+	"Asia/Bangkok", "Asia/Hong_Kong", "Asia/Jakarta", "Asia/Kolkata", "Asia/Manila",
+	"Asia/Seoul", "Asia/Shanghai", "Asia/Singapore", "Asia/Tokyo",
+	"Europe/Amsterdam", "Europe/Berlin", "Europe/Dublin", "Europe/Lisbon", "Europe/London",
+	"Europe/Madrid", "Europe/Paris", "Europe/Rome", "Europe/Stockholm",
+	"Africa/Johannesburg",
+	"America/Chicago", "America/Denver", "America/Halifax", "America/Los_Angeles",
+	"America/Mexico_City", "America/New_York", "America/Phoenix", "America/Sao_Paulo",
+	"America/Toronto", "America/Vancouver", "Pacific/Honolulu",
+}
+
+// groupSettings is what every page header shows. A read failure is logged and
+// the defaults shown, rather than failing a page over its header.
+func (s *Server) groupSettings() store.Settings {
+	st, err := s.db.Settings()
+	if err != nil {
+		log.Printf("settings: %v", err)
+	}
+	return st
+}
+
+func (s *Server) handleAdmin(w http.ResponseWriter, r *http.Request, u *store.User) {
+	http.Redirect(w, r, "/admin/group", http.StatusSeeOther)
+}
+
+func (s *Server) handleGroup(w http.ResponseWriter, r *http.Request, u *store.User) {
+	s.render(w, http.StatusOK, "group.html", page{
+		Title: "Group", Tab: "group", User: u,
+		Form: s.groupSettings(), Zones: zones, Saved: r.URL.Query().Get("saved") == "1",
+	})
+}
+
+func (s *Server) handleGroupPost(w http.ResponseWriter, r *http.Request, u *store.User) {
+	st := store.Settings{
+		GroupName: strings.TrimSpace(r.FormValue("group_name")),
+		SlotStart: strings.TrimSpace(r.FormValue("slot_start")),
+		SlotEnd:   strings.TrimSpace(r.FormValue("slot_end")),
+		Timezone:  strings.TrimSpace(r.FormValue("timezone")),
+	}
+	if msg := validateSettings(&st); msg != "" {
+		s.render(w, http.StatusBadRequest, "group.html", page{
+			Title: "Group", Tab: "group", User: u, Form: st, Zones: zones, Error: msg,
+		})
+		return
+	}
+	if err := s.db.SaveSettings(st, time.Now()); err != nil {
+		s.fail(w, "Couldn't save the settings.", err)
+		return
+	}
+	log.Printf("admin: user=%d saved group settings", u.ID)
+	// Post/redirect/get, so a refresh does not resubmit.
+	http.Redirect(w, r, "/admin/group?saved=1", http.StatusSeeOther)
+}
+
+// validateSettings checks and normalises st in place, returning a message for
+// the admin if something is wrong.
+func validateSettings(st *store.Settings) string {
+	if st.GroupName == "" {
+		return "Give the group a name."
+	}
+	if utf8.RuneCountInString(st.GroupName) > maxGroupName {
+		return "Keep the group name to 60 characters or fewer."
+	}
+	start, err := parseClock(st.SlotStart)
+	if err != nil {
+		return "Enter the start time as HH:MM, e.g. 19:00."
+	}
+	end, err := parseClock(st.SlotEnd)
+	if err != nil {
+		return "Enter the end time as HH:MM, e.g. 22:00."
+	}
+	if start.Equal(end) {
+		return "The start and end times can't be the same."
+	}
+	// Browsers may submit 19:00:00 from a time input; store HH:MM only.
+	st.SlotStart, st.SlotEnd = start.Format("15:04"), end.Format("15:04")
+
+	// LoadLocation also accepts "" and "Local", which mean UTC and the
+	// server's own zone; neither is a timezone a group lives in.
+	if st.Timezone == "" || st.Timezone == "Local" {
+		return "Choose a timezone, e.g. Australia/Brisbane."
+	}
+	loc, err := time.LoadLocation(st.Timezone)
+	if err != nil {
+		return "That isn't a timezone name. Use the form Region/City, e.g. Australia/Brisbane."
+	}
+	st.Timezone = loc.String()
+	return ""
+}
+
+// parseClock reads HH:MM, also accepting the HH:MM:SS some browsers submit
+// from a time input.
+func parseClock(v string) (time.Time, error) {
+	t, err := time.Parse("15:04", v)
+	if err != nil {
+		t, err = time.Parse("15:04:05", v)
+	}
+	return t, err
+}

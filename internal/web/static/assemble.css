@@ -171,8 +171,9 @@ input[type="text"], input[type="time"], input[type="url"], select {
 }
 input:focus-visible, select:focus-visible { outline: none; border-color: var(--accent); }
 .field { margin-bottom: 1.1rem; }
+.field .hint { margin: .35rem 0 0; color: var(--muted); font-size: .85rem; }
 .field-row { display: flex; gap: .75rem; }
-.field-row > .field { flex: 1; }
+.field-row > * { flex: 1; min-width: 0; }
 
 .notice {
   padding: .75rem 1rem;
@@ -213,13 +214,16 @@ input:focus-visible, select:focus-visible { outline: none; border-color: var(--a
 
 /* ---- tabs (admin sections) ----------------------------------------------- */
 .tabs { display: flex; gap: 6px; margin: 0 0 1.25rem; overflow-x: auto; }
+/* Equal-width tabs that shrink rather than scroll: four must fit at 360px. */
 .tabs a {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
   min-height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: .4rem .75rem;
+  padding: .4rem .25rem;
+  font-size: .9rem;
   border-radius: var(--radius);
   background: var(--surface);
   color: var(--muted);

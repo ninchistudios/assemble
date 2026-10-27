@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#15171c">
 <meta name="robots" content="noindex, nofollow">
-<title>assemble{{if .Title}}: {{.Title}}{{end}}</title>
+<title>{{.Group.GroupName}}{{if .Title}}: {{.Title}}{{end}}</title>
 <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/static/icon.svg">
 <link rel="preload" href="/static/fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -14,7 +14,7 @@
 <body>
 <header>
 <a href="/" aria-label="home">{{template "mark"}}</a>
-<h1>assemble</h1>
+<h1>{{.Group.GroupName}}<span class="slot">{{.Group.SlotStart}}–{{.Group.SlotEnd}} · {{.Group.Timezone}}</span></h1>
 </header>
 <main>
 {{end}}
