@@ -495,3 +495,8 @@ button.link {
 footer .source { display: flex; padding: 10px; margin: -10px; color: var(--muted); }
 footer .source:hover, footer .source:focus-visible { color: var(--text); }
 .github-icon { width: 22px; height: 22px; fill: currentColor; }
+
+/* ---- privacy and terms ------------------------------------------------------ */
+.legal ul { padding-left: 1.2rem; margin: 0 0 1rem; }
+.legal li + li { margin-top: .5rem; }
+.legal-links { font-size: .85rem; margin-top: 1rem; }

@@ -124,6 +124,10 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /auth/callback", s.handleCallback)
 	s.mux.HandleFunc("POST /auth/logout", s.handleLogout)
 	s.mux.HandleFunc("GET /join/{token}", s.handleJoin)
+
+	// Public pages. Google's consent screen links here, so no sign-in.
+	s.mux.HandleFunc("GET /privacy", s.static("privacy.html", "Privacy"))
+	s.mux.HandleFunc("GET /terms", s.static("terms.html", "Terms"))
 	// Registered only under the bypass, which config.Load refuses to enable
 	// anywhere but http://localhost, so this cannot exist in production.
 	if s.cfg.DevBypass {
@@ -265,6 +269,14 @@ func (s *Server) render(w http.ResponseWriter, status int, name string, p page) 
 		// Status and headers are already on the wire, so this cannot become a
 		// 500. Log it; the client gets a truncated page.
 		log.Printf("render %s: %v", name, err)
+	}
+}
+
+// static serves a page that needs nothing but the layout. It shows whoever
+// is signed in, but never requires it.
+func (s *Server) static(name, title string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		s.render(w, http.StatusOK, name, page{Title: title, User: s.currentUser(w, r)})
 	}
 }
 
