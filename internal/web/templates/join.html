@@ -1,6 +1,7 @@
 {{define "join.html"}}{{template "top" .}}
 <h2>Join {{.Group.GroupName}}</h2>
-<p>You've been invited to share your availability with {{.Group.GroupName}}, so the group can find days when everyone can make it.</p>
-<p class="muted">Sign in with your Google account to join. The group sees your name; the admin also sees your email.</p>
+<p>You've been invited to share your availability with {{.Group.GroupName}}, so the group can coordinate days and times when everyone can get together.</p>
+<p class="muted">Sign in with your Google account to join. The admin can see your email address.</p>
+<p class="muted">Nothing is read from Google Calendar or Gmail - the only data shared with the group is your name and any availability you enter in the app.</p>
 <a class="btn" href="/auth/login">Sign in with Google to join</a>
 {{template "bottom" .}}{{end}}
