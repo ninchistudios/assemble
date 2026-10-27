@@ -114,25 +114,19 @@ func (s *Server) handleCallback(w http.ResponseWriter, r *http.Request) {
 	s.signIn(w, r, ui)
 }
 
-// localOnly serves the dev sign-in only to requests addressed to this machine
-// by a loopback name. config.Load already refuses the bypass unless the base
-// URL is localhost, but that is a statement about configuration, not about
-// who can reach the port: a misconfigured instance behind a proxy would
-// otherwise hand anyone who forges an Origin header any account they like.
-// Through a proxy the Host is the public name, so this fails closed.
+// localOnly serves the dev sign-in only to connections from this machine.
+// config.Load already insists on a loopback listener under the bypass; this
+// checks the connecting peer as well, rather than the client-supplied Host
+// header, so the guard does not rest on configuration alone.
 func (s *Server) localOnly(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		host := r.Host
-		if h, _, err := net.SplitHostPort(host); err == nil {
-			host = h
-		}
-		switch strings.Trim(host, "[]") {
-		case "localhost", "127.0.0.1", "::1":
+		host, _, err := net.SplitHostPort(r.RemoteAddr)
+		if ip := net.ParseIP(host); err == nil && ip != nil && ip.IsLoopback() {
 			next(w, r)
-		default:
-			s.refusals.Printf("refused dev sign-in for host %q", r.Host)
-			s.notFound(w)
+			return
 		}
+		s.refusals.Printf("refused dev sign-in from %s", r.RemoteAddr)
+		s.notFound(w)
 	}
 }
 
@@ -164,11 +158,23 @@ func (s *Server) signIn(w http.ResponseWriter, r *http.Request, ui auth.UserInfo
 	// Taken (and cleared) up front, so a refused or failed attempt does not
 	// leave an invite lying around for the next person on this browser.
 	inviteToken := auth.TakeInvite(w, r, s.cfg.Secure())
-	isAdminEmail := ui.EmailVerified && strings.EqualFold(ui.Email, s.cfg.AdminEmail)
 	name := ui.Name
 	if name == "" {
 		name, _, _ = strings.Cut(ui.Email, "@")
 	}
+
+	// ASSEMBLE_ADMIN_EMAIL grants admin to a verified Google account with that
+	// address. Once granted, the grant is bound to that account's sub: while
+	// the variable is unchanged, only the bound account holds admin through
+	// it, so a recycled or changed address can't inherit the role. Setting a
+	// different address is a deliberate handover and grants it afresh.
+	boundEmail, boundSub, err := s.db.AdminBinding()
+	if err != nil {
+		s.fail(w, "Couldn't complete sign-in.", err)
+		return
+	}
+	isAdminEmail := ui.EmailVerified && strings.EqualFold(ui.Email, s.cfg.AdminEmail)
+	grantAdmin := isAdminEmail && (!strings.EqualFold(boundEmail, s.cfg.AdminEmail) || ui.Sub == boundSub)
 
 	u, err := s.db.UserBySub(ui.Sub)
 	switch {
@@ -182,8 +188,7 @@ func (s *Server) signIn(w http.ResponseWriter, r *http.Request, ui auth.UserInfo
 		if err := s.db.UpdateProfile(u.ID, ui.Email, name); err != nil {
 			log.Printf("auth: update profile user=%d: %v", u.ID, err)
 		}
-		// The operator moved ASSEMBLE_ADMIN_EMAIL to an existing member.
-		if isAdminEmail && !u.IsAdmin() {
+		if grantAdmin && !u.IsAdmin() {
 			if err := s.db.SetRole(u.ID, store.RoleAdmin); err != nil {
 				s.fail(w, "Couldn't complete sign-in.", err)
 				return
@@ -191,10 +196,9 @@ func (s *Server) signIn(w http.ResponseWriter, r *http.Request, ui auth.UserInfo
 			log.Printf("auth: promoted user=%d to admin from ASSEMBLE_ADMIN_EMAIL", u.ID)
 		}
 
-	case errors.Is(err, store.ErrNotFound) && isAdminEmail:
-		// Bootstrap. Refuse if the address already belongs to a user under a
-		// different sub: emails can be reassigned, and a recycled address
-		// must not inherit the admin account.
+	case errors.Is(err, store.ErrNotFound) && grantAdmin:
+		// Bootstrap, or a handover to someone not yet a member. Refuse if the
+		// address already belongs to a user under a different sub.
 		taken, err := s.db.EmailInUse(ui.Email)
 		if err != nil {
 			s.fail(w, "Couldn't complete sign-in.", err)
@@ -212,8 +216,9 @@ func (s *Server) signIn(w http.ResponseWriter, r *http.Request, ui auth.UserInfo
 		log.Printf("auth: bootstrapped admin user=%d", u.ID)
 
 	case errors.Is(err, store.ErrNotFound) && inviteToken != "":
-		// The link may have been disabled while they were at Google.
-		inv, err := s.db.ActiveInvite(inviteToken)
+		// Checked and inserted in one statement: the link may have been
+		// disabled while they were at Google, or this very moment.
+		u, err = s.db.JoinViaInvite(inviteToken, ui.Sub, ui.Email, name, now)
 		if errors.Is(err, store.ErrNotFound) {
 			s.refusals.Printf("auth: refused sub=%s: invite no longer active", ui.Sub)
 			s.render(w, http.StatusForbidden, "denied.html", page{Title: "Invite no longer valid", Email: ui.Email,
@@ -224,11 +229,7 @@ func (s *Server) signIn(w http.ResponseWriter, r *http.Request, ui auth.UserInfo
 			s.fail(w, "Couldn't complete sign-in.", err)
 			return
 		}
-		if u, err = s.db.CreateUser(ui.Sub, ui.Email, name, store.RoleMember, inv.ID, now); err != nil {
-			s.fail(w, "Couldn't complete sign-in.", err)
-			return
-		}
-		log.Printf("auth: user=%d joined via invite=%d", u.ID, inv.ID)
+		log.Printf("auth: user=%d joined via invite=%d", u.ID, u.InviteID)
 
 	case errors.Is(err, store.ErrNotFound):
 		s.refusals.Printf("auth: refused sub=%s: not a member", ui.Sub)
@@ -238,6 +239,14 @@ func (s *Server) signIn(w http.ResponseWriter, r *http.Request, ui auth.UserInfo
 	default:
 		s.fail(w, "Couldn't complete sign-in.", err)
 		return
+	}
+
+	if grantAdmin && (ui.Sub != boundSub || !strings.EqualFold(boundEmail, s.cfg.AdminEmail)) {
+		if err := s.db.BindAdmin(s.cfg.AdminEmail, ui.Sub); err != nil {
+			s.fail(w, "Couldn't complete sign-in.", err)
+			return
+		}
+		log.Printf("auth: bound ASSEMBLE_ADMIN_EMAIL to user=%d", u.ID)
 	}
 
 	token, err := auth.NewToken()

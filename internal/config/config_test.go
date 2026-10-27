@@ -94,6 +94,7 @@ func TestDevBypassOnlyOnLocalhost(t *testing.T) {
 	} {
 		setEnv(t)
 		t.Setenv("ASSEMBLE_BASE_URL", tc.base)
+		t.Setenv("ASSEMBLE_LISTEN", "127.0.0.1:8138")
 		t.Setenv("ASSEMBLE_DEV_BYPASS", "1")
 		_, err := Load()
 		if (err == nil) != tc.ok {
@@ -105,6 +106,7 @@ func TestDevBypassOnlyOnLocalhost(t *testing.T) {
 func TestDevBypassNeedsNoGoogle(t *testing.T) {
 	setEnv(t)
 	t.Setenv("ASSEMBLE_BASE_URL", "http://localhost:8138")
+	t.Setenv("ASSEMBLE_LISTEN", "127.0.0.1:8138")
 	t.Setenv("ASSEMBLE_DEV_BYPASS", "1")
 	t.Setenv("ASSEMBLE_GOOGLE_CLIENT_ID", "")
 	t.Setenv("ASSEMBLE_GOOGLE_CLIENT_SECRET", "")
@@ -123,6 +125,26 @@ func TestLocal(t *testing.T) {
 	} {
 		if got := (Config{BaseURL: base}).Local(); got != want {
 			t.Errorf("Local(%s) = %v, want %v", base, got, want)
+		}
+	}
+}
+
+// The bypass must not listen where anything off this machine can connect.
+func TestDevBypassNeedsLoopbackListener(t *testing.T) {
+	for listen, ok := range map[string]bool{
+		"127.0.0.1:8138":    true,
+		"localhost:8138":    true,
+		"[::1]:8138":        true,
+		":8080":             false,
+		"0.0.0.0:8138":      false,
+		"192.168.1.20:8138": false,
+	} {
+		setEnv(t)
+		t.Setenv("ASSEMBLE_BASE_URL", "http://localhost:8138")
+		t.Setenv("ASSEMBLE_DEV_BYPASS", "1")
+		t.Setenv("ASSEMBLE_LISTEN", listen)
+		if _, err := Load(); (err == nil) != ok {
+			t.Errorf("bypass listening on %s: err = %v, want ok=%v", listen, err, ok)
 		}
 	}
 }

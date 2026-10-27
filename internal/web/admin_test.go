@@ -107,6 +107,7 @@ func TestValidateSettings(t *testing.T) {
 		{"bad start", func(s *store.Settings) { s.SlotStart = "7pm" }, false},
 		{"bad end", func(s *store.Settings) { s.SlotEnd = "25:00" }, false},
 		{"same times", func(s *store.Settings) { s.SlotEnd = "19:00" }, false},
+		{"same minute", func(s *store.Settings) { s.SlotStart, s.SlotEnd = "19:00:00", "19:00:30" }, false},
 		{"empty zone", func(s *store.Settings) { s.Timezone = "" }, false},
 		{"Local zone", func(s *store.Settings) { s.Timezone = "Local" }, false},
 		{"abbreviation", func(s *store.Settings) { s.Timezone = "AEST" }, false},

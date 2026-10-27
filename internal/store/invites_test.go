@@ -46,3 +46,24 @@ func TestInviteLifecycle(t *testing.T) {
 		t.Errorf("disabled invite = %+v", list[1])
 	}
 }
+
+func TestJoinViaInviteOnlyWhileActive(t *testing.T) {
+	s := newStore(t)
+	admin, _ := s.CreateUser("sub-a", "a@example.com", "A", RoleAdmin, 0, t0)
+	inv, _ := s.CreateInvite("tok", admin.ID, t0)
+
+	u, err := s.JoinViaInvite("tok", "sub-m", "m@example.com", "M", t0)
+	if err != nil || u.InviteID != inv.ID || u.Role != RoleMember {
+		t.Fatalf("JoinViaInvite = %+v, %v", u, err)
+	}
+	s.DisableInvite(inv.ID, t0)
+	if _, err := s.JoinViaInvite("tok", "sub-n", "n@example.com", "N", t0); !errors.Is(err, ErrNotFound) {
+		t.Errorf("join through disabled invite err = %v, want ErrNotFound", err)
+	}
+	if _, err := s.JoinViaInvite("nope", "sub-o", "o@example.com", "O", t0); !errors.Is(err, ErrNotFound) {
+		t.Errorf("join through unknown token err = %v, want ErrNotFound", err)
+	}
+	if _, err := s.UserBySub("sub-n"); err == nil {
+		t.Error("user created through a disabled invite")
+	}
+}

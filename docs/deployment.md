@@ -37,7 +37,7 @@ ASSEMBLE_ADMIN_EMAIL=you@example.com
 
 `ASSEMBLE_BASE_URL` must be the real public origin. TLS ends at the proxy, so the container only ever sees plain HTTP. `assemble` therefore takes the cookie `Secure` flag from the base URL, not from the request, and the base URL is also what `POST` requests are checked against (their `Origin` header must match).
 
-Leave `ASSEMBLE_DEV_BYPASS` unset. If it is set, the app refuses to start against any base URL other than `http://localhost`.
+Leave `ASSEMBLE_DEV_BYPASS` unset. It is for `go run` on a developer machine only: the app refuses to start with it unless the base URL is `http://localhost` and it listens on a loopback address, which rules out running it in a container.
 
 ### Docker Compose
 
@@ -90,7 +90,7 @@ To check, open `https://YOUR-DOMAIN/healthz`. It should return `ok 2026.1 build 
 
 1. Sign in with the `ASSEMBLE_ADMIN_EMAIL` account. It becomes the admin and is tied to that Google account from then on.
    - If a different Google account later presents the same address (because the address was reassigned), it is refused.
-   - To hand the admin role to an existing member, set `ASSEMBLE_ADMIN_EMAIL` to their address and restart. They are promoted at their next sign-in.
+   - To hand the admin role to someone else, set `ASSEMBLE_ADMIN_EMAIL` to their address and restart. They become admin at their next sign-in, and the role is tied to their Google account from then on. The previous admin keeps the role.
 2. Set the group's name, timeslot and timezone under **Admin → Group**.
 3. Create an invite link under **Admin → Invites** and post it to the group. Once everyone has joined, disable it.
 
@@ -103,7 +103,7 @@ Everything lives in one SQLite database on the `assemble-data` volume (`/data/as
 **Online backup:** a consistent copy, taken while the app runs.
 
 ```sh
-docker run --rm -v assemble-data:/data -v "$PWD":/backup alpine \
+docker run --rm --volumes-from assemble -v "$PWD":/backup alpine \
   sh -c 'apk add -q sqlite && sqlite3 /data/assemble.db ".backup /backup/assemble-$(date +%F).db"'
 ```
 
@@ -111,14 +111,14 @@ docker run --rm -v assemble-data:/data -v "$PWD":/backup alpine \
 
 ```sh
 docker compose stop assemble
-docker run --rm -v assemble-data:/data -v "$PWD":/backup alpine \
+docker run --rm --volumes-from assemble -v "$PWD":/backup alpine \
   tar czf /backup/assemble-data-$(date +%F).tgz -C /data .
 docker compose start assemble
 ```
 
 **Restore:** stop the container, put the backup file in place as `/data/assemble.db` (removing any `-wal` and `-shm` files), and start it again.
 
-The volume name gets a project prefix (e.g. `assemble_assemble-data`) depending on how compose names the stack. Check it with `docker volume ls`.
+`--volumes-from assemble` mounts exactly the volume the `assemble` container uses, whatever Compose or Portainer named it. It works whether that container is running or stopped.
 
 ## Updating
 
@@ -171,7 +171,7 @@ A copy whose `ASSEMBLE_BASE_URL` is `localhost` or `127.0.0.1` marks every page 
 | `redirect_uri_mismatch` at Google | `ASSEMBLE_BASE_URL` + `/auth/callback` doesn't exactly match a redirect URI on the OAuth client. Scheme, host and port must all match. |
 | Members get "access blocked" or an error at Google, but the admin can sign in | The consent screen is still in **Testing**. Publish it to **In production** (README step 1). |
 | Container exits with `config: missing required environment: ...` | The message names every variable that is unset. On Portainer, remember that `env_file:` is ignored. |
-| `ASSEMBLE_DEV_BYPASS only runs against http://localhost` | The dev bypass was left on in a production config. Remove it. |
+| `ASSEMBLE_DEV_BYPASS only runs against http://localhost`, or `needs ASSEMBLE_LISTEN on a loopback address` | The dev bypass was left on in a server config. Remove it. |
 | 502 from the proxy | The proxy scheme is `https`; it must be `http`. Or the proxy and container aren't on the same Docker network. |
 | "That request didn't come from this site." on every form | `ASSEMBLE_BASE_URL` doesn't match the address in the browser, e.g. `http` vs `https`, or `www.` vs bare domain. |
 | "Not a member" for the admin | The address in `ASSEMBLE_ADMIN_EMAIL` doesn't match the Google account, or it already belongs to another account (see First sign-in). |

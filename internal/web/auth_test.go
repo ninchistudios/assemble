@@ -207,12 +207,12 @@ func TestDevLoginUsesTheSameRules(t *testing.T) {
 	e := devEnv(t)
 	post := func(email string) *http.Cookie {
 		req := httptestForm("/auth/dev", "http://localhost:8138", url.Values{"email": {email}})
-		req.Host = "localhost:8138"
+		req.RemoteAddr = "127.0.0.1:50000"
 		rec := e.serve(req)
 		return cookie(rec, auth.SessionCookie)
 	}
 	login := httptestRequest(http.MethodGet, "/auth/login", "")
-	login.Host = "localhost:8138"
+	login.RemoteAddr = "127.0.0.1:50000"
 	if rec := e.serve(login); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "Google is bypassed") {
 		t.Fatalf("GET /auth/login under bypass = %d", rec.Code)
 	}
@@ -224,28 +224,95 @@ func TestDevLoginUsesTheSameRules(t *testing.T) {
 	}
 }
 
-// A bypass instance wrongly exposed through a proxy: the attacker forges the
-// Origin, but the Host is the public name the proxy forwards.
+// The guard checks who is connecting, not what they claim: a remote client
+// that forges both Host and Origin is still refused.
 func TestDevLoginRefusedOffLoopback(t *testing.T) {
 	e := devEnv(t)
-	for _, host := range []string{"assemble.example.com", "192.168.1.20:8138", "localhost.example.com"} {
+	for _, peer := range []string{"192.168.1.20:50000", "172.17.0.1:50000", "203.0.113.9:50000"} {
 		req := httptestForm("/auth/dev", "http://localhost:8138", url.Values{"email": {testAdminEmail}})
-		req.Host = host
+		req.Host = "localhost:8138"
+		req.RemoteAddr = peer
 		rec := e.serve(req)
 		if rec.Code != http.StatusNotFound || cookie(rec, auth.SessionCookie) != nil {
-			t.Errorf("dev sign-in via Host %q = %d", host, rec.Code)
+			t.Errorf("dev sign-in from %s = %d", peer, rec.Code)
 		}
 		login := httptestRequest(http.MethodGet, "/auth/login", "")
-		login.Host = host
+		login.RemoteAddr = peer
 		if rec := e.serve(login); rec.Code != http.StatusNotFound {
-			t.Errorf("dev login page via Host %q = %d", host, rec.Code)
+			t.Errorf("dev login page from %s = %d", peer, rec.Code)
 		}
 	}
-	for _, host := range []string{"127.0.0.1:8138", "[::1]:8138", "localhost"} {
+	for _, peer := range []string{"127.0.0.1:50000", "[::1]:50000"} {
 		req := httptestForm("/auth/dev", "http://localhost:8138", url.Values{"email": {testAdminEmail}})
-		req.Host = host
+		req.RemoteAddr = peer
 		if rec := e.serve(req); rec.Code != http.StatusSeeOther {
-			t.Errorf("dev sign-in via loopback Host %q = %d", host, rec.Code)
+			t.Errorf("dev sign-in from loopback %s = %d", peer, rec.Code)
 		}
+	}
+}
+
+// The original admin's Google address changes, and someone else later signs
+// in with the old one. The variable is unchanged, so the grant stays with the
+// bound account.
+func TestAdminAddressReusedByAnotherAccountRefused(t *testing.T) {
+	e := newEnv(t)
+	e.session(t, adminID)
+	moved := adminID
+	moved.Email = "ada.new@example.com"
+	e.session(t, moved) // profile now carries the new address
+
+	claimant := auth.UserInfo{Sub: "sub-new-owner", Email: testAdminEmail, EmailVerified: true}
+	if rec := e.googleSignIn(t, claimant); rec.Code != http.StatusForbidden {
+		t.Errorf("new owner of the admin address = %d, want 403", rec.Code)
+	}
+	if u, _ := e.db.UserBySub(adminID.Sub); !u.IsAdmin() {
+		t.Error("original admin lost the role")
+	}
+}
+
+// A member who comes to hold the admin address is not promoted while the
+// variable still names the address it was bound under.
+func TestMemberWithBoundAdminAddressNotPromoted(t *testing.T) {
+	e := newEnv(t)
+	e.session(t, adminID)
+	moved := adminID
+	moved.Email = "ada.new@example.com"
+	e.session(t, moved)
+
+	m, _ := e.memberSession(t, "m1")
+	e.session(t, auth.UserInfo{Sub: "m1", Email: testAdminEmail, EmailVerified: true})
+	if u, _ := e.db.UserByID(m.ID); u.IsAdmin() {
+		t.Error("member was promoted through a bound address")
+	}
+}
+
+// Changing the variable is a deliberate handover.
+func TestHandoverByChangingAdminEmail(t *testing.T) {
+	e := newEnv(t)
+	e.session(t, adminID)
+	m, _ := e.memberSession(t, "m1")
+
+	e.s.cfg.AdminEmail = "m1@example.com"
+	e.session(t, auth.UserInfo{Sub: "m1", Email: "m1@example.com", EmailVerified: true})
+	if u, _ := e.db.UserByID(m.ID); !u.IsAdmin() {
+		t.Fatal("handover did not promote the member")
+	}
+	email, sub, _ := e.db.AdminBinding()
+	if email != "m1@example.com" || sub != "m1" {
+		t.Errorf("binding after handover = %s/%s", email, sub)
+	}
+}
+
+// An admin bootstrapped before bindings were recorded is bound at startup.
+func TestExistingAdminBoundAtStartup(t *testing.T) {
+	db := newStoreForWeb(t)
+	if _, err := db.CreateUser(adminID.Sub, testAdminEmail, "Ada", store.RoleAdmin, 0, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := New(config.Config{BaseURL: testBase, AdminEmail: "Admin@Example.com"}, db); err != nil {
+		t.Fatal(err)
+	}
+	if _, sub, _ := db.AdminBinding(); sub != adminID.Sub {
+		t.Errorf("startup binding sub = %q, want %q", sub, adminID.Sub)
 	}
 }

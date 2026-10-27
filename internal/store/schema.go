@@ -52,4 +52,13 @@ CREATE TABLE sessions (
 );
 CREATE INDEX sessions_user ON sessions(user_id);
 `,
+
+	// 2: which Google account ASSEMBLE_ADMIN_EMAIL was last granted to. The
+	// address alone is not enough: emails can be reassigned or changed, so
+	// once bound, only that account holds admin by virtue of the address.
+	// A different value in the variable is a deliberate handover.
+	`
+ALTER TABLE settings ADD COLUMN admin_email TEXT;
+ALTER TABLE settings ADD COLUMN admin_sub   TEXT;
+`,
 }

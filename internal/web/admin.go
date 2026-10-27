@@ -91,11 +91,12 @@ func validateSettings(st *store.Settings) string {
 	if err != nil {
 		return "Enter the end time as HH:MM, e.g. 22:00."
 	}
-	if start.Equal(end) {
+	// Browsers may submit 19:00:00 from a time input; store HH:MM only, and
+	// compare what will be stored, so 19:00:00 and 19:00:30 count as equal.
+	st.SlotStart, st.SlotEnd = start.Format("15:04"), end.Format("15:04")
+	if st.SlotStart == st.SlotEnd {
 		return "The start and end times can't be the same."
 	}
-	// Browsers may submit 19:00:00 from a time input; store HH:MM only.
-	st.SlotStart, st.SlotEnd = start.Format("15:04"), end.Format("15:04")
 
 	// LoadLocation also accepts "" and "Local", which mean UTC and the
 	// server's own zone; neither is a timezone a group lives in.

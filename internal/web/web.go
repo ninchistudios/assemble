@@ -63,9 +63,29 @@ func New(cfg config.Config, db *store.Store) (*Server, error) {
 		etags:    etags,
 		refusals: newLogLimiter(20, time.Hour),
 	}
+	if err := s.bindExistingAdmin(); err != nil {
+		return nil, err
+	}
 	s.routes()
 	s.handler = securityHeaders(s.sameOrigin(limitBody(s.mux)))
 	return s, nil
+}
+
+// bindExistingAdmin records the admin binding for an instance bootstrapped
+// before bindings existed: if nothing is bound yet and exactly one enabled
+// admin has the configured address, bind it, so the address cannot be
+// claimed by a different account in the meantime.
+func (s *Server) bindExistingAdmin() error {
+	email, _, err := s.db.AdminBinding()
+	if err != nil || email != "" {
+		return err
+	}
+	admins, err := s.db.AdminsWithEmail(s.cfg.AdminEmail)
+	if err != nil || len(admins) != 1 {
+		return err
+	}
+	log.Printf("auth: bound ASSEMBLE_ADMIN_EMAIL to existing admin user=%d", admins[0].ID)
+	return s.db.BindAdmin(s.cfg.AdminEmail, admins[0].Sub)
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) { s.handler.ServeHTTP(w, r) }

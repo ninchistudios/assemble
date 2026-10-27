@@ -7,6 +7,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"runtime/debug"
@@ -154,7 +155,28 @@ func Load() (Config, error) {
 	if c.DevBypass && (u.Scheme != "http" || (u.Hostname() != "localhost" && u.Hostname() != "127.0.0.1")) {
 		return Config{}, errors.New("ASSEMBLE_DEV_BYPASS only runs against http://localhost or http://127.0.0.1")
 	}
+	// The base URL is only a claim about how the app is addressed. Under the
+	// bypass the listener itself must be loopback, so nothing off this
+	// machine can connect at all. (It also means no bypass inside a container,
+	// whose port is reached from outside the loopback interface.)
+	if c.DevBypass && !loopbackListen(c.Listen) {
+		return Config{}, errors.New("ASSEMBLE_DEV_BYPASS needs ASSEMBLE_LISTEN on a loopback address, e.g. 127.0.0.1:8138")
+	}
 	return c, nil
+}
+
+// loopbackListen reports whether a listen address accepts only loopback
+// connections. ":8080" (every interface) does not.
+func loopbackListen(addr string) bool {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return false
+	}
+	if host == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 // Local reports whether this instance is addressed as this machine, i.e. a

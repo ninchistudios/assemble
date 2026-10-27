@@ -87,7 +87,7 @@ All configuration is environment variables. Group settings (name, timeslot, time
 | `ASSEMBLE_ADMIN_EMAIL` | yes | The first admin's Google address. It must be verified with Google, and it is bound to that Google account on first sign-in. |
 | `ASSEMBLE_DB_PATH` | no | SQLite file. Defaults to `data/assemble.db`; the example compose file sets `/data/assemble.db` on a volume. |
 | `ASSEMBLE_LISTEN` | no | Listen address inside the container. Defaults to `:8080`. |
-| `ASSEMBLE_DEV_BYPASS` | no | `1` replaces Google with a local test form. Only allowed with an `http://localhost` base URL. See [Development](#development). |
+| `ASSEMBLE_DEV_BYPASS` | no | `1` replaces Google with a local test form. Only allowed with an `http://localhost` base URL and a loopback `ASSEMBLE_LISTEN`, so not in a container. See [Development](#development). |
 
 There's no session secret to manage. Sessions are random tokens stored hashed in the database, so restarts and image updates never sign anyone out.
 

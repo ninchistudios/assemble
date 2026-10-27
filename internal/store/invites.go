@@ -81,6 +81,26 @@ func (s *Store) ActiveInvite(token string) (Invite, error) {
 	return scanInvite(s.db.QueryRow(inviteQuery+` WHERE i.token = ? AND i.disabled_at IS NULL`, token))
 }
 
+// JoinViaInvite creates a member through the invite with this token, only if
+// that invite is active at the moment of the insert. The check and the insert
+// are one statement, so a link disabled a moment earlier cannot let anyone
+// through. ErrNotFound means there is no active invite with that token.
+func (s *Store) JoinViaInvite(token, sub, email, name string, now time.Time) (User, error) {
+	res, err := s.db.Exec(`
+INSERT INTO users (sub, email, name, role, invite_id, created_at)
+SELECT ?, ?, ?, ?, id, ? FROM invites WHERE token = ? AND disabled_at IS NULL`,
+		sub, email, name, RoleMember, Stamp(now), token)
+	if err != nil {
+		return User{}, fmt.Errorf("join via invite: %w", err)
+	}
+	if n, err := res.RowsAffected(); err != nil {
+		return User{}, err
+	} else if n == 0 {
+		return User{}, ErrNotFound
+	}
+	return s.UserBySub(sub)
+}
+
 // DisableInvite turns a link off for good. Disabling an already-disabled link
 // keeps its original date.
 func (s *Store) DisableInvite(id int64, now time.Time) error {

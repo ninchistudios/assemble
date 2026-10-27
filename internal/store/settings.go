@@ -41,3 +41,36 @@ func (s *Store) SaveSettings(st Settings, now time.Time) error {
 		st.GroupName, st.SlotStart, st.SlotEnd, st.Timezone, Stamp(now))
 	return err
 }
+
+// AdminBinding returns the ASSEMBLE_ADMIN_EMAIL value that last granted admin,
+// and the Google sub it was granted to. Both are empty until the first grant.
+func (s *Store) AdminBinding() (email, sub string, err error) {
+	var e, u sql.NullString
+	err = s.db.QueryRow(`SELECT admin_email, admin_sub FROM settings WHERE id = 1`).Scan(&e, &u)
+	return e.String, u.String, err
+}
+
+// BindAdmin records that ASSEMBLE_ADMIN_EMAIL=email granted admin to sub.
+func (s *Store) BindAdmin(email, sub string) error {
+	_, err := s.db.Exec(`UPDATE settings SET admin_email = ?, admin_sub = ? WHERE id = 1`, email, sub)
+	return err
+}
+
+// AdminsWithEmail lists enabled admins whose email matches, case-insensitively.
+// Used once, to bind an admin bootstrapped before bindings were recorded.
+func (s *Store) AdminsWithEmail(email string) ([]User, error) {
+	rows, err := s.db.Query(`SELECT `+userCols+` FROM users WHERE role = 'admin' AND enabled = 1 AND email = ? COLLATE NOCASE`, email)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []User
+	for rows.Next() {
+		u, err := scanUser(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, u)
+	}
+	return out, rows.Err()
+}
