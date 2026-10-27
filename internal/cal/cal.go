@@ -77,9 +77,19 @@ func (d Day) Short() string { return d.civil().Format("Mon 2 Jan") }
 // later ones don't exist yet.
 type Window struct{ First, Last Day }
 
-// WindowFor is the window as of today.
+// WindowFor is the window as of today. The horizon is the same day of the
+// month HorizonMonths on, clamped to that month's last day: AddDate alone
+// would roll 31 December into 3 March and then 1 January back to 1 March,
+// moving the horizon backwards overnight.
 func WindowFor(today Day) Window {
-	return Window{First: today, Last: Day(today.civil().AddDate(0, HorizonMonths, 0).Format(layout))}
+	t := today.civil()
+	first := time.Date(t.Year(), t.Month()+HorizonMonths, 1, 0, 0, 0, 0, time.UTC)
+	lastDay := first.AddDate(0, 1, -1).Day()
+	day := t.Day()
+	if day > lastDay {
+		day = lastDay
+	}
+	return Window{First: today, Last: Day(time.Date(first.Year(), first.Month(), day, 0, 0, 0, 0, time.UTC).Format(layout))}
 }
 
 // Editable reports whether availability can still be set for d. A day stays

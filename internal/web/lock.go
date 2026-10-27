@@ -31,8 +31,8 @@ func unavailable(group []memberStatus) string {
 }
 
 // handleLock books a day. If anyone enabled isn't [YES] or [OK], the admin
-// must confirm an override; the day page's form says so up front, and this
-// re-checks in case answers changed since the page loaded.
+// must confirm an override: the day page's script asks first, and without
+// it (or if answers changed since the page loaded) this shows a confirm page.
 func (s *Server) handleLock(w http.ResponseWriter, r *http.Request, u *store.User) {
 	d, ok := s.dayFromPath(w, r)
 	if !ok {
@@ -42,29 +42,30 @@ func (s *Server) handleLock(w http.ResponseWriter, r *http.Request, u *store.Use
 		s.render(w, http.StatusConflict, "message.html", page{Title: "Can't lock in", Message: "This day has passed.", User: u})
 		return
 	}
-	group, err := s.groupFor(u, d)
-	if err != nil {
-		s.fail(w, "Couldn't lock in that day.", err)
-		return
-	}
-	missing := unavailable(group)
-	if missing != "" && r.FormValue("override") != "1" {
+	// The store checks availability in the same transaction as the booking,
+	// so an answer changing after this page was loaded is still caught.
+	err := s.db.Lock(d, u.ID, r.FormValue("override") == "1", s.now())
+	if errors.Is(err, store.ErrNeedsOverride) {
+		group, gerr := s.groupFor(u, d)
+		if gerr != nil {
+			s.fail(w, "Couldn't lock in that day.", gerr)
+			return
+		}
 		s.render(w, http.StatusConflict, "confirm.html", page{
 			Title:   "Lock in anyway?",
-			Message: "Not everyone can make " + d.Short() + ": " + missing + ".",
+			Message: "Not everyone can make " + d.Short() + ": " + unavailable(group) + ".",
 			User:    u,
 			Confirm: &confirmForm{Action: dayPath(d) + "/lock", Fields: map[string]string{"override": "1"},
 				Button: "Lock in anyway", Back: dayPath(d)},
 		})
 		return
 	}
-	err = s.db.Lock(d, u.ID, missing != "", s.now())
 	if err != nil && !errors.Is(err, store.ErrLocked) {
 		s.fail(w, "Couldn't lock in that day.", err)
 		return
 	}
 	if err == nil {
-		log.Printf("calendar: user=%d locked in %s override=%v", u.ID, d, missing != "")
+		log.Printf("calendar: user=%d locked in %s", u.ID, d)
 	}
 	http.Redirect(w, r, dayPath(d), http.StatusSeeOther)
 }

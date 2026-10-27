@@ -40,8 +40,14 @@ func TestLockNeedsOverrideConfirm(t *testing.T) {
 	e.do(t, http.MethodPost, "/day/2026-11-20/status", url.Values{"status": {"yes"}}, admin)
 
 	body := e.get(t, "/day/2026-11-20", admin).Body.String()
-	if !strings.Contains(body, "Member jo (?)") || !strings.Contains(body, `name="override" value="1"`) {
-		t.Error("lock form doesn't name who's missing or carry the override")
+	// The form names who's missing and marks itself for the script's
+	// confirm, but doesn't carry the override itself: a plain form post must
+	// get the server's confirm page.
+	if !strings.Contains(body, "Member jo (?)") || !strings.Contains(body, "data-override") {
+		t.Error("lock form doesn't name who's missing or mark the override")
+	}
+	if strings.Contains(body, `name="override"`) {
+		t.Error("lock form carries the override before anyone confirmed")
 	}
 	// Without the override the server asks first.
 	rec := e.do(t, http.MethodPost, "/day/2026-11-20/lock", url.Values{}, admin)

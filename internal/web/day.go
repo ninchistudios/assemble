@@ -216,21 +216,13 @@ func (s *Server) handleSetStatus(w http.ResponseWriter, r *http.Request, u *stor
 		return
 	}
 
-	// Pulling out of a locked-in day cancels it, so ask first.
-	cancels, err := s.wouldCancel(u, d, st)
-	if err != nil {
-		log.Printf("set status user=%d day=%s: %v", u.ID, d, err)
-		s.answer(w, r, d, http.StatusInternalServerError, "Couldn't save that. Please try again.")
-		return
-	}
-	if cancels && r.FormValue("confirm") != "1" {
+	// Pulling out of a locked-in day cancels it, so the store refuses the
+	// change until it's confirmed. It decides in the same transaction as the
+	// write, so a lock-in arriving a moment earlier can't be missed.
+	cancels, err := s.db.ChangeStatus(u.ID, d, st, r.FormValue("confirm") == "1", s.now())
+	if errors.Is(err, store.ErrNeedsConfirm) {
 		s.askToPullOut(w, r, u, d, st)
 		return
-	}
-	if cancels {
-		err = s.db.PullOut(u.ID, d, st, s.now())
-	} else {
-		err = s.db.SetStatus(u.ID, d, st, s.now())
 	}
 	if err != nil {
 		log.Printf("set status user=%d day=%s: %v", u.ID, d, err)
@@ -255,21 +247,6 @@ func (s *Server) handleSetStatus(w http.ResponseWriter, r *http.Request, u *stor
 
 // pullOutWarning is the question asked before a change cancels a booking.
 const pullOutWarning = "This will cancel the locked-in session. Are you sure?"
-
-// wouldCancel reports whether setting st on d pulls u out of a locked-in
-// day: the day is locked and u goes from [YES]/[OK] to [NO]/[?].
-func (s *Server) wouldCancel(u *store.User, d cal.Day, st cal.Status) (bool, error) {
-	if _, err := s.db.LockinFor(d); errors.Is(err, store.ErrNotFound) {
-		return false, nil
-	} else if err != nil {
-		return false, err
-	}
-	current, err := s.db.Status(u.ID, d)
-	if err != nil {
-		return false, err
-	}
-	return cal.Cancels(current, st), nil
-}
 
 // askToPullOut asks for the confirm: the script gets JSON to show confirm()
 // with, a plain form gets a page with a button that resends with confirm=1.

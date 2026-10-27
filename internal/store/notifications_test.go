@@ -10,10 +10,11 @@ func TestNoticesFollowLockAndCancel(t *testing.T) {
 	a, _ := s.CreateUser("sub-a", "a@example.com", "Ada", RoleAdmin, 0, t0)
 	j, _ := s.CreateUser("sub-j", "j@example.com", "Jo", RoleMember, 0, t0)
 
-	s.Lock("2026-11-20", a.ID, false, t0)
+	s.Lock("2026-11-20", a.ID, true, t0)
 	s.Unlock("2026-11-20", a.ID, t0.Add(time.Minute))
-	s.Lock("2026-11-21", a.ID, false, t0.Add(2*time.Minute))
-	s.PullOut(j.ID, "2026-11-21", "no", t0.Add(3*time.Minute))
+	s.SetStatus(j.ID, "2026-11-21", "yes", t0)
+	s.Lock("2026-11-21", a.ID, true, t0.Add(2*time.Minute))
+	s.ChangeStatus(j.ID, "2026-11-21", "no", true, t0.Add(3*time.Minute))
 
 	got, err := s.Notices(j.ID, "2026-11-14")
 	if err != nil || len(got) != 4 {
@@ -28,8 +29,8 @@ func TestNoticesFollowLockAndCancel(t *testing.T) {
 	}
 
 	// A failed lock (already locked) adds nothing.
-	s.Lock("2026-11-22", a.ID, false, t0)
-	s.Lock("2026-11-22", a.ID, false, t0)
+	s.Lock("2026-11-22", a.ID, true, t0)
+	s.Lock("2026-11-22", a.ID, true, t0)
 	if n, _ := s.Notices(j.ID, "2026-11-22"); len(n) != 1 {
 		t.Errorf("double lock made %d notices for the day, want 1", len(n))
 	}
@@ -39,7 +40,7 @@ func TestDismissIsPerPersonAndNoticesExpire(t *testing.T) {
 	s := newStore(t)
 	a, _ := s.CreateUser("sub-a", "a@example.com", "Ada", RoleAdmin, 0, t0)
 	j, _ := s.CreateUser("sub-j", "j@example.com", "Jo", RoleMember, 0, t0)
-	s.Lock("2026-11-20", a.ID, false, t0)
+	s.Lock("2026-11-20", a.ID, true, t0)
 	n, _ := s.Notices(j.ID, "2026-11-14")
 
 	if err := s.Dismiss(n[0].ID, j.ID); err != nil {
@@ -63,7 +64,7 @@ func TestNoticesUseDisplayName(t *testing.T) {
 	s := newStore(t)
 	a, _ := s.CreateUser("sub-a", "a@example.com", "Ada Lovelace", RoleAdmin, 0, t0)
 	s.SetDisplayName(a.ID, "Ada")
-	s.Lock("2026-11-20", a.ID, false, t0)
+	s.Lock("2026-11-20", a.ID, true, t0)
 	n, _ := s.Notices(a.ID, "2026-11-14")
 	if len(n) != 1 || n[0].ActorName != "Ada" {
 		t.Errorf("notice actor = %+v, want display name Ada", n)

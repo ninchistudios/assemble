@@ -6,8 +6,8 @@
 <a class="up-row{{if .Locked}} locked{{else if .AllAvailable}} all{{end}}" href="/day/{{.Day}}">
 <span class="up-date{{if .IsToday}} today{{end}}">{{.Short}}{{if .IsToday}}<span class="sr-only"> (today)</span>{{end}}</span>
 <span class="bar" role="img" aria-label="{{index .Counts 0}} yes, {{index .Counts 1}} ok, {{index .Counts 2}} no, {{index .Counts 3}} not answered">{{range .Segments}}<i class="seg-{{.}}"></i>{{end}}</span>
-<span class="up-mine">{{template "status" .Mine.Icon}}</span>
-{{if .Locked}}{{template "lock-icon"}}{{else}}<span class="lock-gap"></span>{{end}}
+<span class="up-mine">{{template "status" .Mine.Icon}}<span class="sr-only">You: {{.Mine.Label}}</span></span>
+{{if .Locked}}{{template "lock-icon"}}<span class="sr-only">Locked in</span>{{else}}<span class="lock-gap"></span>{{end}}
 </a></li>
 {{end}}</ul>
 <nav class="menu"><a href="/">Today</a></nav>

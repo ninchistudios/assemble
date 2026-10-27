@@ -106,3 +106,28 @@ func TestStatusRules(t *testing.T) {
 		t.Error("ParseStatus accepted maybe")
 	}
 }
+
+// The rolling horizon must never move backwards from one day to the next,
+// including across month ends and leap years.
+func TestHorizonNeverRetreats(t *testing.T) {
+	for _, tc := range []struct{ today, want Day }{
+		{"2026-12-30", "2027-02-28"},
+		{"2026-12-31", "2027-02-28"}, // not 3 March
+		{"2027-01-01", "2027-03-01"},
+		{"2027-12-31", "2028-02-29"}, // leap year
+		{"2026-08-31", "2026-10-31"},
+		{"2026-10-31", "2026-12-31"},
+	} {
+		if got := WindowFor(tc.today).Last; got != tc.want {
+			t.Errorf("horizon from %s = %s, want %s", tc.today, got, tc.want)
+		}
+	}
+	prev := WindowFor("2026-01-01").Last
+	for d := Day("2026-01-02"); d.Before("2029-01-01"); d = d.Add(1) {
+		last := WindowFor(d).Last
+		if last.Before(prev) {
+			t.Fatalf("horizon retreated on %s: %s -> %s", d, prev, last)
+		}
+		prev = last
+	}
+}

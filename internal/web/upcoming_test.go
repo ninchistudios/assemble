@@ -47,3 +47,14 @@ func TestUpcoming(t *testing.T) {
 		t.Errorf("Others/You headings = %d, want one per month (3)", n)
 	}
 }
+
+// Screen readers can't see icons, so my status and the padlock have text.
+func TestUpcomingIconsHaveText(t *testing.T) {
+	e, admin := dayEnv(t)
+	e.do(t, http.MethodPost, "/day/2026-11-20/status", url.Values{"status": {"yes"}}, admin)
+	e.do(t, http.MethodPost, "/day/2026-11-20/lock", url.Values{}, admin)
+	body := e.get(t, "/upcoming", admin).Body.String()
+	if !strings.Contains(body, `<span class="sr-only">You: YES</span>`) || !strings.Contains(body, `<span class="sr-only">Locked in</span>`) {
+		t.Error("upcoming icons have no screen-reader text")
+	}
+}

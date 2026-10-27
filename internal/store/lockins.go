@@ -20,23 +20,41 @@ type Lockin struct {
 // ErrLocked is returned when locking a day that is already locked in.
 var ErrLocked = errors.New("already locked in")
 
-// Lock books a day and notifies the group, in one transaction. override
-// records that not every member was available.
-func (s *Store) Lock(day cal.Day, by int64, override bool, now time.Time) error {
+// ErrNeedsOverride is returned when locking a day that not every enabled
+// member can make, without the admin having confirmed the override.
+var ErrNeedsOverride = errors.New("not everyone is available")
+
+// Lock books a day and notifies the group. Availability is checked in the
+// same transaction as the booking, so an answer changing a moment before
+// can't slip past: if any enabled member isn't [YES] or [OK], the lock needs
+// overrideConfirmed, and the booking records that it was an override.
+func (s *Store) Lock(day cal.Day, by int64, overrideConfirmed bool, now time.Time) error {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-	res, err := tx.Exec(`INSERT INTO lockins (day, locked_by, locked_at, override) VALUES (?, ?, ?, ?) ON CONFLICT (day) DO NOTHING`,
-		day, by, Stamp(now), override)
+	var locked int
+	if err := tx.QueryRow(`SELECT COUNT(*) FROM lockins WHERE day = ?`, day).Scan(&locked); err != nil {
+		return fmt.Errorf("lock: %w", err)
+	}
+	if locked > 0 {
+		return ErrLocked
+	}
+	var missing int
+	err = tx.QueryRow(`
+SELECT COUNT(*) FROM users u
+LEFT JOIN availability a ON a.user_id = u.id AND a.day = ?
+WHERE u.enabled = 1 AND (a.status IS NULL OR a.status = 'no')`, day).Scan(&missing)
 	if err != nil {
 		return fmt.Errorf("lock: %w", err)
 	}
-	if n, err := res.RowsAffected(); err != nil {
-		return err
-	} else if n == 0 {
-		return ErrLocked
+	if missing > 0 && !overrideConfirmed {
+		return ErrNeedsOverride
+	}
+	if _, err := tx.Exec(`INSERT INTO lockins (day, locked_by, locked_at, override) VALUES (?, ?, ?, ?)`,
+		day, by, Stamp(now), missing > 0); err != nil {
+		return fmt.Errorf("lock: %w", err)
 	}
 	if err := notify(tx, NoticeLocked, day, by, now); err != nil {
 		return err
@@ -112,21 +130,42 @@ func (s *Store) Lockins(first, last cal.Day) (map[cal.Day]Lockin, error) {
 	return out, rows.Err()
 }
 
-// PullOut records a member's new status on a locked-in day and cancels the
-// lock-in, in one transaction: there is never a moment where the member has
-// pulled out but the day still shows as booked, or the reverse.
-func (s *Store) PullOut(userID int64, day cal.Day, status cal.Status, now time.Time) error {
+// ErrNeedsConfirm is returned when a status change would pull a member out
+// of a locked-in day and they haven't confirmed cancelling it.
+var ErrNeedsConfirm = errors.New("would cancel a locked-in day")
+
+// ChangeStatus sets a member's status for a day. If the day is locked in and
+// the member is pulling out ([YES]/[OK] to [NO]/[?]), the change cancels the
+// lock-in, and needs confirmed; without it nothing changes and the result is
+// ErrNeedsConfirm. The lock-in, the old status and the change are all read
+// and written in one transaction, so a lock-in arriving a moment earlier
+// can't be missed. cancelled reports whether the day was cancelled.
+func (s *Store) ChangeStatus(userID int64, day cal.Day, status cal.Status, confirmed bool, now time.Time) (cancelled bool, err error) {
 	tx, err := s.db.Begin()
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer tx.Rollback()
+	var locked int
+	if err := tx.QueryRow(`SELECT COUNT(*) FROM lockins WHERE day = ?`, day).Scan(&locked); err != nil {
+		return false, fmt.Errorf("change status: %w", err)
+	}
+	var current string
+	err = tx.QueryRow(`SELECT status FROM availability WHERE user_id = ? AND day = ?`, userID, day).Scan(&current)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return false, fmt.Errorf("change status: %w", err)
+	}
+	pullsOut := locked > 0 && cal.Cancels(cal.Status(current), status)
+	if pullsOut && !confirmed {
+		return false, ErrNeedsConfirm
+	}
 	if err := setStatus(tx, userID, day, status, now); err != nil {
-		return fmt.Errorf("pull out: %w", err)
+		return false, fmt.Errorf("change status: %w", err)
 	}
-	// Someone else may have cancelled it a moment ago; that's fine.
-	if err := unlock(tx, day, userID, now); err != nil && !errors.Is(err, ErrNotFound) {
-		return fmt.Errorf("pull out: %w", err)
+	if pullsOut {
+		if err := unlock(tx, day, userID, now); err != nil {
+			return false, fmt.Errorf("change status: %w", err)
+		}
 	}
-	return tx.Commit()
+	return pullsOut, tx.Commit()
 }
