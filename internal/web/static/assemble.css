@@ -128,6 +128,10 @@ header nav { margin-left: auto; }
 header .env-tag { margin-left: auto; background: var(--no); color: var(--on-danger); }
 
 footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   padding: 1rem 0;
   color: var(--muted);
   font-size: .75rem;
@@ -486,3 +490,8 @@ button.link {
 .sw-unknown { background: var(--unknown); }
 .type-sample { margin: 0 0 .5rem; }
 .w400 { font-weight: 400; } .w500 { font-weight: 500; } .w600 { font-weight: 600; } .w700 { font-weight: 700; } .w800 { font-weight: 800; }
+
+/* ---- footer source link ----------------------------------------------------- */
+footer .source { display: flex; padding: 10px; margin: -10px; color: var(--muted); }
+footer .source:hover, footer .source:focus-visible { color: var(--text); }
+.github-icon { width: 22px; height: 22px; fill: currentColor; }

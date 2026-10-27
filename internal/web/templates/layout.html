@@ -25,7 +25,7 @@
 
 {{define "bottom"}}
 </main>
-<footer>assemble {{.Version}}</footer>
+<footer><span>assemble {{.Version}}</span><a class="source" href="https://github.com/ninchistudios/assemble" rel="noopener noreferrer" aria-label="assemble on GitHub">{{template "github-icon"}}</a></footer>
 {{if .Notices}}<script src="/static/notices.js" defer></script>{{end}}
 </body>
 </html>
