@@ -1,6 +1,7 @@
 package web
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/ninchistudios/assemble/internal/store"
+	"github.com/ninchistudios/assemble/internal/words"
 )
 
 // maxGroupName keeps the header to a line or two on a 360px phone.
@@ -54,10 +56,11 @@ func (s *Server) handleGroup(w http.ResponseWriter, r *http.Request, u *store.Us
 
 func (s *Server) handleGroupPost(w http.ResponseWriter, r *http.Request, u *store.User) {
 	st := store.Settings{
-		GroupName: strings.TrimSpace(r.FormValue("group_name")),
-		SlotStart: strings.TrimSpace(r.FormValue("slot_start")),
-		SlotEnd:   strings.TrimSpace(r.FormValue("slot_end")),
-		Timezone:  strings.TrimSpace(r.FormValue("timezone")),
+		GroupName:   words.Clean(r.FormValue("group_name")),
+		SlotStart:   strings.TrimSpace(r.FormValue("slot_start")),
+		SlotEnd:     strings.TrimSpace(r.FormValue("slot_end")),
+		Timezone:    strings.TrimSpace(r.FormValue("timezone")),
+		BannedWords: cleanList(r.FormValue("banned_words")),
 	}
 	if msg := validateSettings(&st); msg != "" {
 		s.render(w, http.StatusBadRequest, "group.html", page{
@@ -82,6 +85,13 @@ func validateSettings(st *store.Settings) string {
 	}
 	if utf8.RuneCountInString(st.GroupName) > maxGroupName {
 		return "Keep the group name to 60 characters or fewer."
+	}
+	if utf8.RuneCountInString(st.BannedWords) > words.MaxList {
+		return fmt.Sprintf("Keep the language filter to %d characters or fewer.", words.MaxList)
+	}
+	// The new list applies to the name being saved with it.
+	if words.New(st.BannedWords).Blocked(st.GroupName) {
+		return blockedMsg
 	}
 	start, err := parseClock(st.SlotStart)
 	if err != nil {
@@ -111,6 +121,18 @@ func validateSettings(st *store.Settings) string {
 	return ""
 }
 
+// cleanList tidies the admin's comma-separated filter: each entry cleaned,
+// empty ones dropped, joined with ", " so it reads back neatly.
+func cleanList(s string) string {
+	var out []string
+	for _, e := range strings.Split(s, ",") {
+		if e = words.Clean(e); e != "" {
+			out = append(out, e)
+		}
+	}
+	return strings.Join(out, ", ")
+}
+
 // parseClock reads HH:MM, also accepting the HH:MM:SS some browsers submit
 // from a time input.
 func parseClock(v string) (time.Time, error) {
@@ -120,3 +142,9 @@ func parseClock(v string) (time.Time, error) {
 	}
 	return t, err
 }
+
+// filter is the admin's language filter as it stands now.
+func (s *Server) filter() *words.Filter { return words.New(s.groupSettings().BannedWords) }
+
+// blockedMsg is what a member sees when their text trips the filter.
+const blockedMsg = "Blocked by language filter."

@@ -105,4 +105,10 @@ CREATE TABLE dismissals (
   PRIMARY KEY (notification_id, user_id)
 );
 `,
+
+	// 4: the admin's language filter (#33): comma-separated words or phrases
+	// that are blocked in new text and masked wherever text is shown.
+	`
+ALTER TABLE settings ADD COLUMN banned_words TEXT NOT NULL DEFAULT '';
+`,
 }

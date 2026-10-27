@@ -11,6 +11,7 @@ import (
 
 	"github.com/ninchistudios/assemble/internal/cal"
 	"github.com/ninchistudios/assemble/internal/store"
+	"github.com/ninchistudios/assemble/internal/words"
 )
 
 // dayView is a day as the day page shows it.
@@ -94,6 +95,7 @@ func (s *Server) groupFor(me *store.User, d cal.Day) ([]memberStatus, error) {
 	if err != nil {
 		return nil, err
 	}
+	f := s.filter()
 	var mine []memberStatus
 	var rest []memberStatus
 	for _, u := range users {
@@ -101,7 +103,7 @@ func (s *Server) groupFor(me *store.User, d cal.Day) ([]memberStatus, error) {
 			continue
 		}
 		a := answers[d][u.ID]
-		m := memberStatus{Name: u.Name, Me: u.ID == me.ID, Status: a.Status, Note: a.Note}
+		m := memberStatus{Name: f.Mask(u.Name), Me: u.ID == me.ID, Status: a.Status, Note: f.Mask(a.Note)}
 		if m.Me {
 			mine = append(mine, m)
 		} else {
@@ -293,9 +295,13 @@ func (s *Server) handleSetNote(w http.ResponseWriter, r *http.Request, u *store.
 	if !ok {
 		return
 	}
-	note := strings.Join(strings.Fields(r.FormValue("note")), " ")
+	note := words.Clean(r.FormValue("note"))
 	if utf8.RuneCountInString(note) > store.MaxNote {
 		s.answer(w, r, d, http.StatusBadRequest, fmt.Sprintf("Keep the note to %d characters or fewer.", store.MaxNote))
+		return
+	}
+	if s.filter().Blocked(note) {
+		s.answer(w, r, d, http.StatusBadRequest, blockedMsg)
 		return
 	}
 	if _, win := s.today(); !win.Editable(d) {

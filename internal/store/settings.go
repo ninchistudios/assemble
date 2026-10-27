@@ -13,6 +13,9 @@ type Settings struct {
 	SlotEnd   string // HH:MM; earlier than SlotStart means it runs past midnight
 	Timezone  string // IANA name
 	UpdatedAt time.Time
+
+	// BannedWords is the admin's language filter, comma-separated.
+	BannedWords string
 }
 
 // DefaultSettings mirrors the row the first migration inserts. It is what
@@ -22,8 +25,8 @@ var DefaultSettings = Settings{GroupName: "assemble", SlotStart: "19:00", SlotEn
 func (s *Store) Settings() (Settings, error) {
 	var st Settings
 	var updated sql.NullString
-	err := s.db.QueryRow(`SELECT group_name, slot_start, slot_end, timezone, updated_at FROM settings WHERE id = 1`).
-		Scan(&st.GroupName, &st.SlotStart, &st.SlotEnd, &st.Timezone, &updated)
+	err := s.db.QueryRow(`SELECT group_name, slot_start, slot_end, timezone, updated_at, banned_words FROM settings WHERE id = 1`).
+		Scan(&st.GroupName, &st.SlotStart, &st.SlotEnd, &st.Timezone, &updated, &st.BannedWords)
 	if err != nil {
 		return DefaultSettings, err
 	}
@@ -37,8 +40,8 @@ func (s *Store) Settings() (Settings, error) {
 
 // SaveSettings stores already-validated settings.
 func (s *Store) SaveSettings(st Settings, now time.Time) error {
-	_, err := s.db.Exec(`UPDATE settings SET group_name = ?, slot_start = ?, slot_end = ?, timezone = ?, updated_at = ? WHERE id = 1`,
-		st.GroupName, st.SlotStart, st.SlotEnd, st.Timezone, Stamp(now))
+	_, err := s.db.Exec(`UPDATE settings SET group_name = ?, slot_start = ?, slot_end = ?, timezone = ?, banned_words = ?, updated_at = ? WHERE id = 1`,
+		st.GroupName, st.SlotStart, st.SlotEnd, st.Timezone, st.BannedWords, Stamp(now))
 	return err
 }
 

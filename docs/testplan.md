@@ -58,6 +58,9 @@ Follow the [README](../README.md#1-create-a-google-oauth-client) from scratch, w
 | E1 | **Admin → Group**: set a name, 19:00–22:00 and your timezone, e.g. `Australia/Brisbane`, then **Save** | **Saved.** The header shows the name and `19:00–22:00 · Australia/Brisbane`. |
 | E2 | Enter the timezone `AEST` and save | Refused with a message; nothing changes. |
 | E3 | `docker compose restart assemble`, then reload | Settings kept; still signed in. |
+| E4 | Under **Language filter**, add a word, e.g. `darn`, and save | Saved, and the list reads back neatly, comma-separated. |
+| E5 | As a member, save a note or display name containing that word | Refused: **Blocked by language filter.** A longer word that contains it, like `darned`, is fine. |
+| E6 | Text containing the word that was saved before the filter | Shows as `***` in the group list, notices and member list. |
 
 ## F. Invites and members
 

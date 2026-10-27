@@ -186,7 +186,7 @@ form.inline { display: inline; }
 /* ---- forms ---------------------------------------------------------------- */
 label { display: block; font-weight: 700; margin: 0 0 .35rem; }
 label .muted { font-weight: 500; }
-input[type="text"], input[type="time"], input[type="url"], select {
+input[type="text"], input[type="time"], input[type="url"], select, textarea {
   display: block;
   width: 100%;
   min-height: var(--tap);

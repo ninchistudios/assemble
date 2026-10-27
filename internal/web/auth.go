@@ -11,6 +11,7 @@ import (
 
 	"github.com/ninchistudios/assemble/internal/auth"
 	"github.com/ninchistudios/assemble/internal/store"
+	"github.com/ninchistudios/assemble/internal/words"
 )
 
 // userHandler is a handler that runs only for a signed-in, enabled user.
@@ -158,7 +159,13 @@ func (s *Server) signIn(w http.ResponseWriter, r *http.Request, ui auth.UserInfo
 	// Taken (and cleared) up front, so a refused or failed attempt does not
 	// leave an invite lying around for the next person on this browser.
 	inviteToken := auth.TakeInvite(w, r, s.cfg.Secure())
-	name := ui.Name
+	// Google's display name is free text too. It isn't blocked (it's the
+	// person's own account), but it's tidied and capped like any other, and
+	// the filter masks it on display.
+	name := words.Clean(ui.Name)
+	if rs := []rune(name); len(rs) > store.MaxDisplayName {
+		name = string(rs[:store.MaxDisplayName])
+	}
 	if name == "" {
 		name, _, _ = strings.Cut(ui.Email, "@")
 	}

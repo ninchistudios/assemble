@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/ninchistudios/assemble/internal/store"
+	"github.com/ninchistudios/assemble/internal/words"
 )
 
 // handleProfile shows the signed-in member their name and how to change it.
@@ -19,10 +19,16 @@ func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request, u *store.
 // handleProfilePost sets the member's display name; empty goes back to the
 // name from Google.
 func (s *Server) handleProfilePost(w http.ResponseWriter, r *http.Request, u *store.User) {
-	name := strings.Join(strings.Fields(r.FormValue("display_name")), " ")
-	if utf8.RuneCountInString(name) > store.MaxDisplayName {
-		s.render(w, http.StatusBadRequest, "profile.html", page{Title: "Profile", User: u, MaxDisplayName: store.MaxDisplayName,
-			Error: fmt.Sprintf("Keep your name to %d characters or fewer.", store.MaxDisplayName)})
+	name := words.Clean(r.FormValue("display_name"))
+	msg := ""
+	switch {
+	case utf8.RuneCountInString(name) > store.MaxDisplayName:
+		msg = fmt.Sprintf("Keep your name to %d characters or fewer.", store.MaxDisplayName)
+	case s.filter().Blocked(name):
+		msg = blockedMsg
+	}
+	if msg != "" {
+		s.render(w, http.StatusBadRequest, "profile.html", page{Title: "Profile", User: u, MaxDisplayName: store.MaxDisplayName, Error: msg})
 		return
 	}
 	// Choosing exactly your Google name is the same as not choosing one, and

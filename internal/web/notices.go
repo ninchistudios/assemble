@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/ninchistudios/assemble/internal/store"
+	"github.com/ninchistudios/assemble/internal/words"
 )
 
 // noticeView is a notification as the top of a page shows it.
@@ -21,7 +22,7 @@ type noticeView struct {
 
 // noticesFor loads the signed-in member's live notices. A failure is logged
 // and the page shown without them, rather than failing the page.
-func (s *Server) noticesFor(u *store.User) []noticeView {
+func (s *Server) noticesFor(u *store.User, f *words.Filter) []noticeView {
 	today, _ := s.today()
 	ns, err := s.db.Notices(u.ID, today)
 	if err != nil {
@@ -41,7 +42,7 @@ func (s *Server) noticesFor(u *store.User) []noticeView {
 		case n.ActorID == u.ID:
 			v.Meta = "by you"
 		case n.ActorName != "":
-			v.Meta = "by " + n.ActorName
+			v.Meta = "by " + f.Mask(n.ActorName)
 		}
 		out = append(out, v)
 	}

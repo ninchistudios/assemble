@@ -16,6 +16,7 @@ import (
 	"github.com/ninchistudios/assemble/internal/auth"
 	"github.com/ninchistudios/assemble/internal/config"
 	"github.com/ninchistudios/assemble/internal/store"
+	"github.com/ninchistudios/assemble/internal/words"
 )
 
 //go:embed templates/*.html
@@ -260,8 +261,14 @@ func (s *Server) render(w http.ResponseWriter, status int, name string, p page) 
 	p.DevBypass = s.cfg.DevBypass
 	p.Local = s.cfg.Local()
 	p.Group = s.groupSettings()
+	// Mask anything the language filter catches in what every page shows.
+	f := words.New(p.Group.BannedWords)
+	p.Group.GroupName = f.Mask(p.Group.GroupName)
 	if p.User != nil {
-		p.Notices = s.noticesFor(p.User)
+		masked := *p.User
+		masked.Name, masked.DisplayName, masked.GoogleName = f.Mask(masked.Name), f.Mask(masked.DisplayName), f.Mask(masked.GoogleName)
+		p.User = &masked
+		p.Notices = s.noticesFor(p.User, f)
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
