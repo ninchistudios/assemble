@@ -57,9 +57,16 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /style", s.handleStyle)
 
 	// Unauthenticated. Liveness plus the build, so a deploy can be confirmed
-	// from outside without signing in.
+	// from outside without signing in. Fails if the database has gone away,
+	// so the container healthcheck notices a lost volume.
 	s.mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		if err := s.db.Ping(); err != nil {
+			log.Printf("healthz: %v", err)
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte("database unavailable\n"))
+			return
+		}
 		_, _ = w.Write([]byte("ok " + s.cfg.Version + "\n"))
 	})
 	s.mux.Handle("GET /static/", s.staticHandler())
