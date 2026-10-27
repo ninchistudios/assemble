@@ -136,6 +136,9 @@ func (s *Server) handleDevLogin(w http.ResponseWriter, r *http.Request) {
 // both land here, so the rules are the same either way.
 func (s *Server) signIn(w http.ResponseWriter, r *http.Request, ui auth.UserInfo) {
 	now := time.Now()
+	// Taken (and cleared) up front, so a refused or failed attempt does not
+	// leave an invite lying around for the next person on this browser.
+	inviteToken := auth.TakeInvite(w, r, s.cfg.Secure())
 	isAdminEmail := ui.EmailVerified && strings.EqualFold(ui.Email, s.cfg.AdminEmail)
 	name := ui.Name
 	if name == "" {
@@ -182,6 +185,25 @@ func (s *Server) signIn(w http.ResponseWriter, r *http.Request, ui auth.UserInfo
 			return
 		}
 		log.Printf("auth: bootstrapped admin user=%d", u.ID)
+
+	case errors.Is(err, store.ErrNotFound) && inviteToken != "":
+		// The link may have been disabled while they were at Google.
+		inv, err := s.db.ActiveInvite(inviteToken)
+		if errors.Is(err, store.ErrNotFound) {
+			log.Printf("auth: refused sub=%s: invite no longer active", ui.Sub)
+			s.render(w, http.StatusForbidden, "denied.html", page{Title: "Invite no longer valid", Email: ui.Email,
+				Message: "The invite link you used has been disabled. Ask your group's admin for a new one."})
+			return
+		}
+		if err != nil {
+			s.fail(w, "Couldn't complete sign-in.", err)
+			return
+		}
+		if u, err = s.db.CreateUser(ui.Sub, ui.Email, name, store.RoleMember, inv.ID, now); err != nil {
+			s.fail(w, "Couldn't complete sign-in.", err)
+			return
+		}
+		log.Printf("auth: user=%d joined via invite=%d", u.ID, inv.ID)
 
 	case errors.Is(err, store.ErrNotFound):
 		log.Printf("auth: refused sub=%s: not a member", ui.Sub)

@@ -76,6 +76,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /auth/login", s.handleLogin)
 	s.mux.HandleFunc("GET /auth/callback", s.handleCallback)
 	s.mux.HandleFunc("POST /auth/logout", s.handleLogout)
+	s.mux.HandleFunc("GET /join/{token}", s.handleJoin)
 	// Registered only under the bypass, which config.Load refuses to enable
 	// anywhere but http://localhost, so this cannot exist in production.
 	if s.cfg.DevBypass {

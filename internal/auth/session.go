@@ -20,6 +20,11 @@ import (
 const (
 	SessionCookie = "assemble_session"
 	stateCookie   = "assemble_oauth_state"
+	inviteCookie  = "assemble_invite"
+
+	// inviteTTL covers opening the link and finishing sign-in at Google,
+	// account chooser and all.
+	inviteTTL = 30 * time.Minute
 
 	// SessionTTL is 6 months, comfortably inside Chrome's 400-day cookie cap
 	// (RFC 6265bis). Rolling: see RenewAfter.
@@ -86,6 +91,29 @@ func SetState(w http.ResponseWriter, state string, secure bool) {
 		Name: stateCookie, Value: state, Path: "/auth", MaxAge: int(stateTTL.Seconds()),
 		HttpOnly: true, Secure: secure, SameSite: http.SameSiteLaxMode,
 	})
+}
+
+// SetInvite remembers which invite link brought the visitor here, across the
+// round trip to Google. Scoped to /auth, where sign-in completes.
+func SetInvite(w http.ResponseWriter, token string, secure bool) {
+	http.SetCookie(w, &http.Cookie{
+		Name: inviteCookie, Value: token, Path: "/auth", MaxAge: int(inviteTTL.Seconds()),
+		HttpOnly: true, Secure: secure, SameSite: http.SameSiteLaxMode,
+	})
+}
+
+// TakeInvite returns the remembered invite token, if any, and clears it: an
+// invite carries into exactly one sign-in attempt.
+func TakeInvite(w http.ResponseWriter, r *http.Request, secure bool) string {
+	c, err := r.Cookie(inviteCookie)
+	if err != nil || c.Value == "" {
+		return ""
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name: inviteCookie, Value: "", Path: "/auth", MaxAge: -1,
+		HttpOnly: true, Secure: secure, SameSite: http.SameSiteLaxMode,
+	})
+	return c.Value
 }
 
 // CheckState compares the state echoed by Google against our cookie and clears it.
