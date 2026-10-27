@@ -99,6 +99,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /{$}", s.requireUser(s.handleToday))
 	s.mux.HandleFunc("GET /day/{date}", s.requireUser(s.handleDay))
 	s.mux.HandleFunc("GET /upcoming", s.requireUser(s.handleUpcoming))
+	s.mux.HandleFunc("GET /profile", s.requireUser(s.handleProfile))
+	s.mux.HandleFunc("POST /profile", s.requireUser(s.handleProfilePost))
 	s.mux.HandleFunc("POST /day/{date}/status", s.requireUser(s.handleSetStatus))
 	s.mux.HandleFunc("POST /day/{date}/note", s.requireUser(s.handleSetNote))
 	s.mux.HandleFunc("POST /day/{date}/lock", s.requireAdmin(s.handleLock))
@@ -164,11 +166,13 @@ type page struct {
 	Invites []inviteRow
 	Members []memberRow
 
-	DayView     *dayView
-	Confirm     *confirmForm
-	Notices     []noticeView // the signed-in member's live notices
-	Upcoming    []upcomingRow
-	StatusIcons []string // icon names, for the day page script to copy
+	DayView  *dayView
+	Confirm  *confirmForm
+	Notices  []noticeView // the signed-in member's live notices
+	Upcoming []upcomingRow
+
+	MaxDisplayName int
+	StatusIcons    []string // icon names, for the day page script to copy
 
 	DevBypass bool
 	Local     bool   // a test copy on this machine: the header says so

@@ -36,7 +36,7 @@ func TestAdminBootstrap(t *testing.T) {
 		t.Errorf("session cookie attributes = %+v", c)
 	}
 	rec := e.get(t, "/", c)
-	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "Signed in as Ada") {
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `Signed in as <a href="/profile">Ada</a>`) {
 		t.Fatalf("GET / as admin = %d\n%s", rec.Code, rec.Body)
 	}
 	u, err := e.db.UserBySub(adminID.Sub)

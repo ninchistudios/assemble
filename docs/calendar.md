@@ -85,5 +85,6 @@ All in migration 3 (`internal/store/schema.go`):
 | `lockins` | day | who, when, override |
 | `notifications` | id | kind (`locked`/`cancelled`), day, who triggered it, when |
 | `dismissals` | (notification, user) | which member dismissed which notice |
+| `users.display_name` | (column) | the name a member chose to be shown by (#14); empty means their Google name. Google sign-ins never overwrite it. |
 
 Deleting a user deletes their answers and dismissals. Users are never deleted in practice; they are disabled.

@@ -85,3 +85,21 @@ func TestCreateSessionSweepsExpired(t *testing.T) {
 		t.Errorf("sessions after sweep = %d, want 1", n)
 	}
 }
+
+func TestDisplayNameSurvivesSignIn(t *testing.T) {
+	s := newStore(t)
+	u, _ := s.CreateUser("sub-a", "a@example.com", "Ada Lovelace", RoleMember, 0, t0)
+	if u.Name != "Ada Lovelace" {
+		t.Fatalf("default name = %q", u.Name)
+	}
+	s.SetDisplayName(u.ID, "Ada")
+	s.UpdateProfile(u.ID, "a@example.com", "Augusta Ada King") // a later sign-in
+	got, _ := s.UserByID(u.ID)
+	if got.Name != "Ada" || got.GoogleName != "Augusta Ada King" {
+		t.Errorf("after sign-in: Name=%q GoogleName=%q", got.Name, got.GoogleName)
+	}
+	s.SetDisplayName(u.ID, "")
+	if got, _ := s.UserByID(u.ID); got.Name != "Augusta Ada King" || got.DisplayName != "" {
+		t.Errorf("after clearing: %+v", got)
+	}
+}

@@ -63,8 +63,12 @@ ALTER TABLE settings ADD COLUMN admin_sub   TEXT;
 `,
 
 	// 3: the 2026.2 calendar. Days are YYYY-MM-DD in the group timezone,
-	// never instants; see docs/calendar.md.
+	// never instants; see docs/calendar.md. Also the member's own choice of
+	// display name (#14), kept apart from the name Google reports so a
+	// sign-in never overwrites it.
 	`
+ALTER TABLE users ADD COLUMN display_name TEXT;
+
 -- One row per member per day they have answered. No row is [?].
 CREATE TABLE availability (
   user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
