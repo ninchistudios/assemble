@@ -66,6 +66,9 @@ func (d Day) Label(today Day) string {
 	return t.Format("Monday 2 January")
 }
 
+// MonthLabel is the month and year the day falls in: "November 2026".
+func (d Day) MonthLabel() string { return d.civil().Format("January 2006") }
+
 // Short is the compact form for lists: "Sat 14 Nov".
 func (d Day) Short() string { return d.civil().Format("Mon 2 Jan") }
 

@@ -42,6 +42,7 @@
 {{end}}
 
 <nav class="menu">
+<a href="/upcoming">Upcoming</a>
 {{if .User.IsAdmin}}<a href="/admin">Admin</a>{{end}}
 <form method="post" action="/auth/logout"><button type="submit" class="link">Sign out</button></form>
 </nav>

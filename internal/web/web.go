@@ -98,6 +98,7 @@ func (s *Server) routes() {
 	// Calendar. Home is today.
 	s.mux.HandleFunc("GET /{$}", s.requireUser(s.handleToday))
 	s.mux.HandleFunc("GET /day/{date}", s.requireUser(s.handleDay))
+	s.mux.HandleFunc("GET /upcoming", s.requireUser(s.handleUpcoming))
 	s.mux.HandleFunc("POST /day/{date}/status", s.requireUser(s.handleSetStatus))
 	s.mux.HandleFunc("POST /day/{date}/note", s.requireUser(s.handleSetNote))
 	s.mux.HandleFunc("POST /day/{date}/lock", s.requireAdmin(s.handleLock))
@@ -166,7 +167,8 @@ type page struct {
 	DayView     *dayView
 	Confirm     *confirmForm
 	Notices     []noticeView // the signed-in member's live notices
-	StatusIcons []string     // icon names, for the day page script to copy
+	Upcoming    []upcomingRow
+	StatusIcons []string // icon names, for the day page script to copy
 
 	DevBypass bool
 	Local     bool   // a test copy on this machine: the header says so
