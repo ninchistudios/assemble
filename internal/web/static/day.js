@@ -20,9 +20,9 @@ function select(value) {
 
 const labels = { yes: "YES", ok: "OK", no: "NO", unknown: "?" };
 
-// Mirror my saved status into my row of the group list, and recount the
-// summary the same way the server writes it.
-function showMine(value) {
+// Mirror my saved status into my row of the group list, and show the
+// summary the server worded for the new state.
+function showMine(value, summaryText) {
   const row = document.querySelector(".group li[data-me]");
   if (row) {
     row.dataset.status = value;
@@ -30,12 +30,8 @@ function showMine(value) {
     if (icon) row.querySelector(".mini").replaceChildren(icon.content.cloneNode(true));
     row.querySelector(".status-word").textContent = labels[value];
   }
-  const counts = { yes: 0, ok: 0, no: 0, unknown: 0 };
-  document.querySelectorAll(".group li").forEach((li) => { counts[li.dataset.status]++; });
   const summary = document.querySelector(".summary");
-  if (summary) {
-    summary.textContent = `${counts.yes} yes · ${counts.ok} ok · ${counts.no} no · ${counts.unknown} ?`;
-  }
+  if (summary && summaryText) summary.textContent = summaryText;
 }
 
 if (picker && picker.getAttribute("aria-disabled") !== "true") {
@@ -74,7 +70,7 @@ if (picker && picker.getAttribute("aria-disabled") !== "true") {
         return;
       }
       select(data.status);
-      showMine(data.status);
+      showMine(data.status, data.summary);
       // A note goes with an answer: offered once there is one, and gone
       // (the server deletes it) when the status goes back to [?].
       if (noteForm) {

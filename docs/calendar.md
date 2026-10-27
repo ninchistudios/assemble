@@ -63,7 +63,17 @@ A locked-in day is a booking: the group meets that day.
 1. **The date** ("Saturday 14 November") and a locked-in marker if the day is booked.
 2. **My status:** four buttons, [YES] [OK] [NO] [?]. The current one is filled and the others outlined. One tap sets it.
 3. **My note** (#15).
-4. **The group:** every enabled member with their status and note, me first, then a summary line such as `3 yes · 1 ok · 1 no · 1 ?`.
+4. **The group:** every enabled member with their status and note, me first, under a phrase saying where the day stands. The first rule that fits wins:
+
+   | When | Phrase |
+   |---|---|
+   | Anyone is [NO] | "*n* can't make it" |
+   | Everyone, me included, is [YES]/[OK] | "Ready to lock in!" |
+   | Everyone else is in, and I haven't said | "All others are in, great option!" |
+   | Nobody is in yet | "No answers yet" |
+   | Otherwise | "*n* are in, it might work..." |
+
+   The server words the phrase and sends it back with each status change, so the page script never repeats these rules.
 5. **Admin only:** Lock in / Cancel.
 6. **Previous / next day.**
 

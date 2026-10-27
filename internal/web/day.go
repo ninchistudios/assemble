@@ -44,14 +44,43 @@ type memberStatus struct {
 	Note   string
 }
 
-// summarise counts statuses the way the page and its script both write
-// them: "3 yes · 1 ok · 1 no · 1 ?".
+// summarise says where the day stands in a phrase, from the viewer's side:
+// anyone out comes first, then whether it's ready, nearly there or open.
 func summarise(group []memberStatus) string {
-	n := map[cal.Status]int{}
+	var in, no, unknown, othersIn, others int
+	var meIn bool
 	for _, m := range group {
-		n[m.Status]++
+		switch {
+		case m.Status.Available():
+			in++
+		case m.Status == cal.No:
+			no++
+		default:
+			unknown++
+		}
+		if m.Me {
+			meIn = m.Status.Available()
+		} else {
+			others++
+			if m.Status.Available() {
+				othersIn++
+			}
+		}
 	}
-	return fmt.Sprintf("%d yes · %d ok · %d no · %d ?", n[cal.Yes], n[cal.OK], n[cal.No], n[cal.Unknown])
+	switch {
+	case no > 0:
+		return fmt.Sprintf("%d can't make it", no)
+	case in == len(group) && in > 0:
+		return "Ready to lock in!"
+	case others > 0 && othersIn == others && !meIn:
+		return "All others are in, great option!"
+	case in == 0:
+		return "No answers yet"
+	case in == 1:
+		return "1 is in, it might work..."
+	default:
+		return fmt.Sprintf("%d are in, it might work...", in)
+	}
 }
 
 // groupFor lists every enabled member's status for d, me first, then in the
@@ -210,7 +239,13 @@ func (s *Server) handleSetStatus(w http.ResponseWriter, r *http.Request, u *stor
 		log.Printf("calendar: user=%d pulled out of %s, cancelling it", u.ID, d)
 	}
 	if wantsJSON(r) {
-		writeJSON(w, http.StatusOK, map[string]any{"status": st.Icon(), "cancelled": cancels})
+		// The phrase depends on everyone's answers, so the server words it
+		// and the script just shows it.
+		summary := ""
+		if group, err := s.groupFor(u, d); err == nil {
+			summary = summarise(group)
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"status": st.Icon(), "cancelled": cancels, "summary": summary})
 		return
 	}
 	http.Redirect(w, r, dayPath(d), http.StatusSeeOther)

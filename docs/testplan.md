@@ -90,7 +90,7 @@ Signed in as the member, on the phone.
 | # | Action | Expect |
 |---|---|---|
 | I1 | Open the app | Today's date, the four status buttons with **?** selected, and the group list with everyone at **?**. |
-| I2 | Tap **YES** | YES fills in straight away, with no reload. Your row in the group list and the summary line update. |
+| I2 | Tap **YES** | YES fills in straight away, with no reload. YES gets a green border. Your row in the group list and the phrase above it update. |
 | I3 | Reload | YES is still selected. |
 | I4 | Swipe left, then tap **NO** | Tomorrow. NO is selected. |
 | I5 | Swipe right twice | Back to today, then yesterday. Yesterday is read-only: the buttons are greyed and it says the day has passed. |

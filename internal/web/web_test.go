@@ -259,8 +259,9 @@ func TestLocalInstanceIsMarked(t *testing.T) {
 // Every page links to the source, signed in or not.
 func TestFooterLinksToSource(t *testing.T) {
 	body := newEnv(t).get(t, "/").Body.String()
-	if !strings.Contains(body, `href="https://github.com/ninchistudios/assemble"`) || !strings.Contains(body, `aria-label="assemble on GitHub"`) {
-		t.Error("footer has no labelled link to the repo")
+	if !strings.Contains(body, `href="https://github.com/ninchistudios/assemble" target="_blank" rel="noopener noreferrer"`) ||
+		!strings.Contains(body, `aria-label="assemble on GitHub (opens in a new tab)"`) {
+		t.Error("footer has no labelled, new-tab link to the repo")
 	}
 }
 

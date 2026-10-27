@@ -145,7 +145,7 @@ func TestGroupStatusForADay(t *testing.T) {
 
 	// Jo sees everyone enabled, Jo first, Sam as [?], and nothing of Gone.
 	body := e.get(t, "/day/2026-11-20", joC).Body.String()
-	if !strings.Contains(body, "1 yes · 0 ok · 1 no · 1 ?") {
+	if !strings.Contains(body, "1 can&#39;t make it") {
 		t.Errorf("summary wrong:\n%s", body)
 	}
 	i := strings.Index
@@ -188,5 +188,51 @@ func TestNotes(t *testing.T) {
 	// The note field is offered only once there's an answer.
 	if body := e.get(t, "/day/2026-11-21", jo).Body.String(); !strings.Contains(body, `class="note-form" method="post" action="/day/2026-11-21/note" hidden`) {
 		t.Error("note field shown before any answer")
+	}
+}
+
+func TestSummaryPhrases(t *testing.T) {
+	m := func(me bool, st cal.Status) memberStatus { return memberStatus{Me: me, Status: st} }
+	for _, tc := range []struct {
+		name  string
+		group []memberStatus
+		want  string
+	}{
+		{"someone out", []memberStatus{m(true, cal.Yes), m(false, cal.No), m(false, cal.No), m(false, cal.Unknown)}, "2 can't make it"},
+		{"me out", []memberStatus{m(true, cal.No), m(false, cal.Yes)}, "1 can't make it"},
+		{"everyone in", []memberStatus{m(true, cal.OK), m(false, cal.Yes)}, "Ready to lock in!"},
+		{"just me, in", []memberStatus{m(true, cal.Yes)}, "Ready to lock in!"},
+		{"all others in", []memberStatus{m(true, cal.Unknown), m(false, cal.Yes), m(false, cal.OK)}, "All others are in, great option!"},
+		{"some unsure", []memberStatus{m(true, cal.Yes), m(false, cal.Yes), m(false, cal.Unknown)}, "2 are in, it might work..."},
+		{"one in", []memberStatus{m(true, cal.Unknown), m(false, cal.Yes), m(false, cal.Unknown)}, "1 is in, it might work..."},
+		{"nobody yet", []memberStatus{m(true, cal.Unknown), m(false, cal.Unknown)}, "No answers yet"},
+		{"just me, unsure", []memberStatus{m(true, cal.Unknown)}, "No answers yet"},
+	} {
+		if got := summarise(tc.group); got != tc.want {
+			t.Errorf("%s: %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}
+
+// The script shows the server's phrase rather than working it out itself.
+func TestStatusChangeReturnsSummary(t *testing.T) {
+	e, admin := dayEnv(t)
+	req := httptestForm("/day/2026-11-20/status", testBase, url.Values{"status": {"yes"}}, admin)
+	req.Header.Set("Accept", "application/json")
+	var got map[string]any
+	json.Unmarshal(e.serve(req).Body.Bytes(), &got)
+	if got["summary"] != "Ready to lock in!" {
+		t.Errorf("summary = %v", got["summary"])
+	}
+}
+
+func TestDayHasUpcomingButton(t *testing.T) {
+	e, admin := dayEnv(t)
+	body := e.get(t, "/", admin).Body.String()
+	if !strings.Contains(body, `<a class="btn btn-secondary" href="/upcoming">Upcoming</a>`) {
+		t.Error("no full-width Upcoming button")
+	}
+	if strings.Contains(body, "lock-hint") {
+		t.Error("the hint under Lock in is still there")
 	}
 }
