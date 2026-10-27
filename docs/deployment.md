@@ -17,8 +17,8 @@ GitHub Actions publishes `ghcr.io/ninchistudios/assemble` with two kinds of tag:
 | Tag | Tracks |
 |---|---|
 | `main` | The latest commit on `main` |
-| `2026.1` | The latest commit on a release branch, while it is being tested before merging |
-| `v2026.1` | A release, frozen |
+| `2026.2` | The latest commit on a release branch, while it is being tested before merging |
+| `v2026.2` | A release, frozen |
 
 For the low-maintenance setup this app is built for, pin a release tag and move it on deliberately. Use `main` only if you want every change as it lands.
 
@@ -84,7 +84,7 @@ For NPM, add a Proxy Host:
 - **Block Common Exploits:** on
 - **SSL:** request a Let's Encrypt certificate, then enable **Force SSL** and **HTTP/2**. HSTS is safe to enable.
 
-To check, open `https://YOUR-DOMAIN/healthz`. It should return `ok 2026.1 build <branch>:<commit>`, the same version the page footer shows.
+To check, open `https://YOUR-DOMAIN/healthz`. It should return `ok <version> build <branch>:<commit>`, the same version the page footer shows.
 
 ## First sign-in
 
@@ -150,7 +150,7 @@ To build with Compose instead, replace `image:` with a `build:` section that pas
     build:
       context: .
       args:
-        VERSION: "2026.1"
+        VERSION: "2026.2"   # match the VERSION file
         COMMIT: ${ASSEMBLE_COMMIT:-}
         BRANCH: ${ASSEMBLE_BRANCH:-}
 ```

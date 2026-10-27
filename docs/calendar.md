@@ -83,7 +83,7 @@ A locked-in day is a booking: the group meets that day.
 
 ### Upcoming days (#28)
 
-One compact row per day in the window: the date, status counts and a locked-in marker. Days where every enabled member is available stand out. Tapping a row opens that day.
+One compact row per day in the window: the date, a bar of the **other** members' answers (one equal segment each, so no inline widths), my own status in its own column, and a padlock if it's locked in. Each month heading also carries the column headings "Others" and "You". A day stands out when every enabled member, me included, is available. Tapping a row opens that day.
 
 ## Storage
 

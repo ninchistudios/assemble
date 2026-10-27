@@ -12,6 +12,7 @@ Each Docker container runs one group, which signs in with Google and joins throu
 - **Members** open the app on today, set their availability with one tap, swipe between days, and leave a short note.
 - **Everyone** sees each member's answer per day, plus an overview of the next two months.
 - **The admin** locks in a day. A member pulling out cancels it, after a confirm, and everyone gets a notice either way.
+- **Also:** members choose the name the group sees them by; the admin can keep a language filter for names and notes; and there are public privacy and terms pages for Google's consent screen.
 
 **2026.1** laid the foundation: Google sign-in, invite links, member management and group settings.
 
@@ -70,7 +71,7 @@ docker compose up -d
 docker compose logs -f assemble
 ```
 
-The log should say `assemble 2026.1 ... listening on :8080 for http://localhost:8138`. Port 8080 is inside the container; you browse to 8138.
+The log should say `assemble <version> build <branch>:<commit> listening on :8080 for http://localhost:8138`. Port 8080 is inside the container; you browse to 8138.
 
 ### 4. Sign in and invite people
 
@@ -134,6 +135,7 @@ In VS Code, the **assemble: run local (dev sign-in)** task does the same. Sign i
 ## Docs
 
 - [docs/deployment.md](docs/deployment.md): production deployment, reverse proxy, backups, updates and troubleshooting
+- [docs/calendar.md](docs/calendar.md): how days, availability, lock-ins and notices work
 - [docs/testplan.md](docs/testplan.md): manual checks after each deploy
 - [docs/ui.md](docs/ui.md): the visual style, palette and icons
 - [agents.md](agents.md): product design and technical decisions

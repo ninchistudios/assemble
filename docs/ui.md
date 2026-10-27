@@ -53,7 +53,7 @@ The palette is small and distinctive, and it avoids primary colours. Status colo
   | no | cross | NO |
   | unknown | question mark | ? |
 
-- **Picker:** in a choice of status, the chosen option is filled. The other options are outlined, with the glyph drawn in the status colour. The shape stays the same and only the fill changes.
+- **Picker:** in a choice of status, the chosen option is filled and its button gets a solid border in the same status colour. The other options are outlined, with the glyph drawn in the status colour. The shape stays the same and only the fill changes.
 - **Sizes:** 48px for anything you tap, 28px (`.small`) for display only.
 - **Other icons, same frame:** a padlock (`lock-icon`) for locked-in days, filled with `--accent`; a cross (`x-icon`) to dismiss a notice. The footer's GitHub mark (`github-icon`, from Octicons) is the one exception to the square frame, because it's GitHub's own mark.
 - **Where they live:** `templates/icons.html` (`status`, `status-off`, `mark`, `lock-icon`, `x-icon`, `github-icon`). The favicon `static/icon.svg` repeats the mark with literal colours, because a favicon can't read CSS variables.
@@ -79,7 +79,7 @@ The palette is small and distinctive, and it avoids primary colours. Status colo
 
 All of these are shown on `/style`.
 
-- **Buttons:** primary buttons (`.btn`) are full width and filled with `--accent`. `.btn-quiet` and `.btn-danger` size to their label, but are never narrower than half the page width. They are all at least 48px tall.
+- **Buttons:** primary buttons (`.btn`) are full width and filled with `--accent`. `.btn-secondary` is full width too, on `--surface-2`, for a second main action such as Upcoming. `.btn-quiet` and `.btn-danger` size to their label, but are never narrower than half the page width. `.btn-small` is for actions inside a row. All are at least 40px tall, and 48px except in rows.
 - **Fields:** a `--surface` fill with a 2px `--line` border, which turns `--accent` when focused.
 - **Rows:** `.rows > li`, a `--surface` card with an optional leading icon, a growing text block with a `.meta` line underneath, and a trailing `.tag`.
 - **Notices:** `.notice` with a coloured left edge: accent for information, `.ok` for success, `.error` for problems.
@@ -91,5 +91,5 @@ The calendar adds these (2026.2):
 - **Group list:** `.rows.group`, one row per member with a 32px status icon, their name, their note as `.meta` and the status word. The viewer's own row has an accent edge.
 - **Lock banner:** `.lock-banner`, an accent outline with the padlock. Locked-in is a booking, not anyone's answer, so it uses the accent rather than a status colour.
 - **Notices:** `.notices`, at the top of every signed-in page. Locked-in notices have an accent edge and cancellations a coral one. Each has a 44px dismiss target.
-- **Upcoming rows:** `.up-row`, the date, a `.bar` of one equal segment per member (yes, ok, no, ? in that order, so no inline widths) and the viewer's own status. A wisteria outline means locked in; a sage outline means everyone can make it.
+- **Upcoming rows:** `.up-row`, the date, a `.bar` of one equal segment per other member (yes, ok, no, ? in that order, so no inline widths) and the viewer's own status. Each month heading carries the column headings "Others" and "You", centred over their columns. A wisteria outline means locked in; a sage outline means everyone can make it.
 - **Local band:** `body.env-local` gives the header a full-width `--env-local` band and a coral **LOCAL** tag when the base URL is localhost.

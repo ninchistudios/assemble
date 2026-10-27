@@ -32,7 +32,7 @@ Follow the [README](../README.md#1-create-a-google-oauth-client) from scratch, w
 |---|---|---|
 | B1 | Follow README step 1 exactly as written | Every screen and label named in it exists. Note anything that differs. |
 | B2 | Check the consent screen's publishing status | **In production**. |
-| B3 | Open `https://YOUR-DOMAIN/healthz` | `ok 2026.1 build main:<commit>`: the deployed branch and the first 8 characters of its commit. The page footer matches. The header has **no** red band or **local** tag. |
+| B3 | Open `https://YOUR-DOMAIN/healthz` | `ok 2026.2 build main:<commit>`: the deployed branch and the first 8 characters of its commit. The page footer matches. The header has **no** red band or **local** tag. |
 
 ## C. Admin sign-in
 
@@ -93,7 +93,7 @@ Signed in as the member, on the phone.
 | # | Action | Expect |
 |---|---|---|
 | I1 | Open the app | Today's date, the four status buttons with **?** selected, and the group list with everyone at **?**. |
-| I2 | Tap **YES** | YES fills in straight away, with no reload. YES gets a green border. Your row in the group list and the phrase above it update. |
+| I2 | Tap **YES** | YES fills in straight away, with no reload, and gets a green border. Your row in the group list and the phrase above it update, e.g. "Ready to lock in!" once everyone's in, or "1 can't make it". |
 | I3 | Reload | YES is still selected. |
 | I4 | Swipe left, then tap **NO** | Tomorrow. NO is selected. |
 | I5 | Swipe right twice | Back to today, then yesterday. Yesterday is read-only: the buttons are greyed and it says the day has passed. |
@@ -122,7 +122,7 @@ Admin and member each on their own device or browser.
 
 | # | Action | Expect |
 |---|---|---|
-| K1 | **Upcoming** from the day view | Two months of days under month headings. Each row has a bar of everyone's answers and your own status. Locked-in days have a padlock and a wisteria outline; days everyone can make have a green outline. |
+| K1 | **Upcoming** from the day view | Two months of days under month headings, each with "Others" and "You" over the columns. Each row has a bar of the other members' answers and your own status. Locked-in days have a padlock and a wisteria outline; days everyone can make have a green outline. |
 | K2 | Tap a row | That day opens. |
 | K3 | Tap **change display name** next to **Signed in as**. Set a display name and save | **Saved**. The group list and other members now show the new name. |
 | K4 | Sign out and back in | The display name is kept, not replaced by your Google name. |
