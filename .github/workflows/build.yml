@@ -2,7 +2,10 @@ name: build
 
 on:
   push:
-    branches: [main]
+    # Release branches (2026.1, ...) publish an image tagged with the branch
+    # name, so a release can be deployed and tested before it is merged.
+    # Each push only moves its own tag: :main changes only on main.
+    branches: [main, "20*"]
     tags: ["v*"]
   pull_request:
 

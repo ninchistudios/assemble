@@ -17,6 +17,7 @@ GitHub Actions publishes `ghcr.io/ninchistudios/assemble` with two kinds of tag:
 | Tag | Tracks |
 |---|---|
 | `main` | The latest commit on `main` |
+| `2026.1` | The latest commit on a release branch, while it is being tested before merging |
 | `v2026.1` | A release, frozen |
 
 For the low-maintenance setup this app is built for, pin a release tag and move it on deliberately. Use `main` only if you want every change as it lands.
