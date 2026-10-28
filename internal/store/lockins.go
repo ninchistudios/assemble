@@ -14,8 +14,12 @@ type Lockin struct {
 	Day      cal.Day
 	LockedBy int64
 	LockedAt time.Time
-	Override bool // locked although not everyone was available
+	Override bool   // locked although not everyone was available
+	Message  string // shown on the day in place of the group line (#41)
 }
+
+// MaxMessage keeps a lock-in message or a MOTD to about two lines on a phone.
+const MaxMessage = 100
 
 // ErrLocked is returned when locking a day that is already locked in.
 var ErrLocked = errors.New("already locked in")
@@ -28,7 +32,8 @@ var ErrNeedsOverride = errors.New("not everyone is available")
 // same transaction as the booking, so an answer changing a moment before
 // can't slip past: if any enabled member isn't [YES] or [OK], the lock needs
 // overrideConfirmed, and the booking records that it was an override.
-func (s *Store) Lock(day cal.Day, by int64, overrideConfirmed bool, now time.Time) error {
+// message is stored as given: it may carry a one-off change of time.
+func (s *Store) Lock(day cal.Day, by int64, overrideConfirmed bool, message string, now time.Time) error {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
@@ -52,8 +57,8 @@ WHERE u.enabled = 1 AND (a.status IS NULL OR a.status = 'no')`, day).Scan(&missi
 	if missing > 0 && !overrideConfirmed {
 		return ErrNeedsOverride
 	}
-	if _, err := tx.Exec(`INSERT INTO lockins (day, locked_by, locked_at, override) VALUES (?, ?, ?, ?)`,
-		day, by, Stamp(now), missing > 0); err != nil {
+	if _, err := tx.Exec(`INSERT INTO lockins (day, locked_by, locked_at, override, message) VALUES (?, ?, ?, ?, ?)`,
+		day, by, Stamp(now), missing > 0, message); err != nil {
 		return fmt.Errorf("lock: %w", err)
 	}
 	if err := notify(tx, NoticeLocked, day, by, now); err != nil {
@@ -90,12 +95,27 @@ func unlock(tx execer, day cal.Day, by int64, now time.Time) error {
 	return notify(tx, NoticeCancelled, day, by, now)
 }
 
+// SetLockMessage rewords a locked-in day's message. It notifies nobody.
+// ErrNotFound if the day isn't locked in.
+func (s *Store) SetLockMessage(day cal.Day, message string) error {
+	res, err := s.db.Exec(`UPDATE lockins SET message = ? WHERE day = ?`, message, day)
+	if err != nil {
+		return fmt.Errorf("set lock message: %w", err)
+	}
+	if n, err := res.RowsAffected(); err != nil {
+		return err
+	} else if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 // LockinFor returns the day's lock-in, or ErrNotFound.
 func (s *Store) LockinFor(day cal.Day) (Lockin, error) {
 	var l Lockin
 	var d, at string
-	err := s.db.QueryRow(`SELECT day, locked_by, locked_at, override FROM lockins WHERE day = ?`, day).
-		Scan(&d, &l.LockedBy, &at, &l.Override)
+	err := s.db.QueryRow(`SELECT day, locked_by, locked_at, override, message FROM lockins WHERE day = ?`, day).
+		Scan(&d, &l.LockedBy, &at, &l.Override, &l.Message)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Lockin{}, ErrNotFound
 	}
@@ -109,7 +129,7 @@ func (s *Store) LockinFor(day cal.Day) (Lockin, error) {
 
 // Lockins returns every lock-in from first to last inclusive, by day.
 func (s *Store) Lockins(first, last cal.Day) (map[cal.Day]Lockin, error) {
-	rows, err := s.db.Query(`SELECT day, locked_by, locked_at, override FROM lockins WHERE day >= ? AND day <= ?`, first, last)
+	rows, err := s.db.Query(`SELECT day, locked_by, locked_at, override, message FROM lockins WHERE day >= ? AND day <= ?`, first, last)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +138,7 @@ func (s *Store) Lockins(first, last cal.Day) (map[cal.Day]Lockin, error) {
 	for rows.Next() {
 		var l Lockin
 		var d, at string
-		if err := rows.Scan(&d, &l.LockedBy, &at, &l.Override); err != nil {
+		if err := rows.Scan(&d, &l.LockedBy, &at, &l.Override, &l.Message); err != nil {
 			return nil, err
 		}
 		l.Day = cal.Day(d)

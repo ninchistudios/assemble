@@ -79,7 +79,7 @@ The palette is small and distinctive, and it avoids primary colours. Status colo
 
 All of these are shown on `/style`.
 
-- **Buttons:** primary buttons (`.btn`) are full width and filled with `--accent`. `.btn-secondary` is full width too, on `--surface-2`, for a second main action such as Upcoming. `.btn-quiet` and `.btn-danger` size to their label, but are never narrower than half the page width. `.btn-small` is for actions inside a row. All are at least 40px tall, and 48px except in rows.
+- **Buttons:** primary buttons (`.btn`) are full width and filled with `--accent`. `.btn-top` is a slimmer (40px) primary button at the top of a page, for **See all upcoming** on a day (2026.3), so the status picker under it stays the focus. `.btn-secondary` is full width too, on `--surface-2`, for a second main action. `.btn-quiet` and `.btn-danger` size to their label, but are never narrower than half the page width. `.btn-small` is for actions inside a row. All are at least 40px tall, and 48px except in rows.
 - **Fields:** a `--surface` fill with a 2px `--line` border, which turns `--accent` when focused.
 - **Rows:** `.rows > li`, a `--surface` card with an optional leading icon, a growing text block with a `.meta` line underneath, and a trailing `.tag`.
 - **Notices:** `.notice` with a coloured left edge: accent for information, `.ok` for success, `.error` for problems.
@@ -90,6 +90,10 @@ The calendar adds these (2026.2):
 - **Status picker:** `.picker`, four equal buttons with the status icon at 56px. Each button holds both the filled and outlined icon. `aria-pressed` decides which shows, so the script changes one attribute and the page never redraws.
 - **Group list:** `.rows.group`, one row per member with a 32px status icon, their name, their note as `.meta` and the status word. The viewer's own row has an accent edge.
 - **Lock banner:** `.lock-banner`, an accent outline with the padlock. Locked-in is a booking, not anyone's answer, so it uses the accent rather than a status colour.
-- **Notices:** `.notices`, at the top of every signed-in page. Locked-in notices have an accent edge and cancellations a coral one. Each has a 44px dismiss target.
+- **Notices:** `.notices`, at the top of every signed-in page. Locked-in notices and the MOTD have an accent edge, cancellations a coral one, and a member joining a muted one. A notice about a day links to it; the others are plain text (`.notice-text` either way) and wrap as needed. Each has a 44px dismiss target.
 - **Upcoming rows:** `.up-row`, the date, a `.bar` of one equal segment per other member (yes, ok, no, ? in that order, so no inline widths) and the viewer's own status. Each month heading carries the column headings "Others" and "You", centred over their columns. A wisteria outline means locked in; a sage outline means everyone can make it.
+- **Lock-in message (2026.3):** `.lock-form`, a labelled field above **Lock in this day**, or with a small **Save** beside it (`.msg-row`) to reword it on a locked-in day. On a locked-in day the group line (`.summary.locked`) is the message, in the accent at body size.
+- **Menu:** the `menu` template, at the foot of home, a day and Help: Admin (admin only), Help and Sign out, then **Signed in as**.
+- **Help:** `help.html` reuses the group rows for the four statuses, each with its icon and meaning.
+- **MOTD form:** at the top of **Admin → Group**, set apart from the settings by a rule (`.motd-form`).
 - **Local band:** `body.env-local` gives the header a full-width `--env-local` band and a coral **LOCAL** tag when the base URL is localhost.

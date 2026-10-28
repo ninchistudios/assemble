@@ -14,27 +14,32 @@ The core use case is `band practice`, where multiple people need to coordinate t
 * As an instance admin, I can set the name of the group, the default timeslot and timezone
 * as an instance admin, I can enable/disable access for other users
 * as an instance admin, I can generate and disable group invite links
-* as an instance admin, I can mark/unmark a day as `locked-in`
+* as an instance admin or manager, I can mark/unmark a day as `locked-in`, with a message for the group
 * as a group member, I can add a public note to my answer for a day
 * as a group member, I can choose the display name the group sees
 * as an instance admin, I can keep a language filter for free text
+* as an instance admin, I can grant/revoke the manager role: lock-in and cancel, but no admin pages
+* as an instance admin, I can post a message of the day
+* as an instance admin or manager, I am told when a new member joins
+* as a group member, I can read a help page explaining the statuses and rules
 
 # FRs
 
-* generate in-app notifications: session locked-in, session cancelled
+* generate in-app notifications: session locked-in, session cancelled, message of the day, new member joined (admin and managers only)
 * Initial user registration from an admin-generated invite link
 * Mobile-first design
 * Google Auth login with caching to enable seamless use
 * initially assume all group members are required, but admin can override lock-in for undersubscribed sessions
 * Date horizon: rolling 2 months in advance, past days read-only, read-only set once the full day is in the past in the group timezone
 * Invite links are multi-use. Intent is that admin posts the link to the group chat, all users register, then the admin disables the invite link.
-* UI should be optimised for minimal taps on the core primary use case - view existing availability for today > opt: tap availability icon to set/change > opt: visually verify > opt: swipe to next day. Availability icons are a set of 4 visible ( only single-select possible) rather than nested underneath a single icon.
-* Admin can lock-in when every enabled member is [YES] or [OK]. Anything else needs the admin to confirm an override to lock-in. [?] counts as not available. 
+* UI should be optimised for minimal taps on the core primary use case - view the upcoming overview (the home page) > tap a day, today being the top row > opt: tap availability icon to set/change > opt: visually verify > opt: swipe to next day. Availability icons are a set of 4 visible ( only single-select possible) rather than nested underneath a single icon.
+* Admin or manager can lock-in when every enabled member is [YES] or [OK]. Anything else needs them to confirm an override to lock-in. [?] counts as not available.
+* Locking in asks for a message, pre-filled "Locked in for [start] to [end]" from the timeslot and editable, so a one-off change of time or place needs no settings change. It replaces the group's status line on that day, and can be reworded later without notifying anyone.
 * A user changing their status from either [YES] or [OK] to either [?] or [NO] on a locked-in date will cancel that lock-in and trigger the notifications. 
 * The user should be prompted to confirm ("this will cancel the locked-in session, are you sure?") if their tapped action will result in session cancellation.
 * Disabled users are excluded from rule tests (e.g. checking if a session can be locked-in or should be cancelled)
 * notifications are displayed to all users, including the one who triggered it, and can be dismissed with a tap (e.g. on an X icon) preventing them appearing again
-* notifications auto-expire once the day they relate to is in the past
+* notifications auto-expire once the day they relate to is in the past. Those not about a day (message of the day, member joined) stay until dismissed. Only the latest message of the day shows, and a new one shows again to everyone.
 
 # NFRs
 
@@ -53,7 +58,6 @@ The core use case is `band practice`, where multiple people need to coordinate t
 * generate in-app notifications to admin: lock-in a session that has full group availability
 * add confirmed bookings to GCal from the webapp
 * Admin mark users as `required` or `optional`
-* Admin grants admin-lite role to other users (e.g. can lock-in or cancel, no user management)
 * Events - e.g. a gig date that the group is practicing for. This is a fixed-date event triggering notifications until all availabilities are specified
 
 # Stack

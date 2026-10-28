@@ -6,7 +6,20 @@ Find the days your group can get together.
 
 Each Docker container runs one group, which signs in with Google and joins through an invite link. It is designed for phones first and to run for months without attention.
 
+<p>
+<img src="docs/upcoming.jpg" width="250" alt="Home: the next two months, one row per day, with the group's answers as a bar and your own as an icon">
+<img src="docs/day-locked.jpg" width="250" alt="A locked-in day: notices at the top, the status picker, and the lock-in message above the group's answers">
+<img src="docs/admin.jpg" width="250" alt="Admin: the message of the day, then the group name, timeslot, timezone and language filter">
+</p>
+
 ## Status
+
+**2026.3** builds on the first months of real use:
+- **Home is Upcoming**, the next two months at a glance. Tap a day to answer it.
+- **Managers** can lock in and cancel days without being admin.
+- **Lock-ins carry a message**, by default the timeslot, which a manager can change for a one-off time or place.
+- **Notices:** the admin can post a message of the day, and the admin and managers hear when someone joins.
+- **A help page** explains the answers and the house rules.
 
 **2026.2** is the first release a group can use day to day:
 - **Members** open the app on today, set their availability with one tap, swipe between days, and leave a short note.

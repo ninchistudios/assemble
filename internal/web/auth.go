@@ -72,6 +72,18 @@ func (s *Server) requireAdmin(next userHandler) http.HandlerFunc {
 	})
 }
 
+// requireManager is requireUser plus a 403 for anyone who can't lock in: the
+// admin and managers pass (#39).
+func (s *Server) requireManager(next userHandler) http.HandlerFunc {
+	return s.requireUser(func(w http.ResponseWriter, r *http.Request, u *store.User) {
+		if !u.CanManage() {
+			s.render(w, http.StatusForbidden, "message.html", page{Title: "Managers only", Message: "Only the group's admin and managers can do that.", User: u})
+			return
+		}
+		next(w, r, u)
+	})
+}
+
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	if s.cfg.DevBypass {
 		s.localOnly(func(w http.ResponseWriter, r *http.Request) {

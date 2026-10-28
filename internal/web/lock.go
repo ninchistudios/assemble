@@ -2,11 +2,14 @@ package web
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/ninchistudios/assemble/internal/store"
+	"github.com/ninchistudios/assemble/internal/words"
 )
 
 // confirmForm is a one-button page asking "are you sure?", for the cases a
@@ -30,8 +33,8 @@ func unavailable(group []memberStatus) string {
 	return strings.Join(out, ", ")
 }
 
-// handleLock books a day. If anyone enabled isn't [YES] or [OK], the admin
-// must confirm an override: the day page's script asks first, and without
+// handleLock books a day. If anyone enabled isn't [YES] or [OK], the admin or
+// manager must confirm an override: the day page's script asks first, and without
 // it (or if answers changed since the page loaded) this shows a confirm page.
 func (s *Server) handleLock(w http.ResponseWriter, r *http.Request, u *store.User) {
 	d, ok := s.dayFromPath(w, r)
@@ -42,9 +45,14 @@ func (s *Server) handleLock(w http.ResponseWriter, r *http.Request, u *store.Use
 		s.render(w, http.StatusConflict, "message.html", page{Title: "Can't lock in", Message: "This day has passed.", User: u})
 		return
 	}
+	msg, problem := s.lockMessage(r)
+	if problem != "" {
+		s.render(w, http.StatusBadRequest, "message.html", page{Title: "Can't lock in", Message: problem, User: u})
+		return
+	}
 	// The store checks availability in the same transaction as the booking,
 	// so an answer changing after this page was loaded is still caught.
-	err := s.db.Lock(d, u.ID, r.FormValue("override") == "1", s.now())
+	err := s.db.Lock(d, u.ID, r.FormValue("override") == "1", msg, s.now())
 	if errors.Is(err, store.ErrNeedsOverride) {
 		group, gerr := s.groupFor(u, d)
 		if gerr != nil {
@@ -55,7 +63,7 @@ func (s *Server) handleLock(w http.ResponseWriter, r *http.Request, u *store.Use
 			Title:   "Lock in anyway?",
 			Message: "Not everyone can make " + d.Short() + ": " + unavailable(group) + ".",
 			User:    u,
-			Confirm: &confirmForm{Action: dayPath(d) + "/lock", Fields: map[string]string{"override": "1"},
+			Confirm: &confirmForm{Action: dayPath(d) + "/lock", Fields: map[string]string{"override": "1", "message": msg},
 				Button: "Lock in anyway", Back: dayPath(d)},
 		})
 		return
@@ -68,6 +76,74 @@ func (s *Server) handleLock(w http.ResponseWriter, r *http.Request, u *store.Use
 		log.Printf("calendar: user=%d locked in %s", u.ID, d)
 	}
 	http.Redirect(w, r, dayPath(d), http.StatusSeeOther)
+}
+
+// handleLockMessage rewords a locked-in day's message (#41). Nobody is
+// notified: it's a correction, not news.
+func (s *Server) handleLockMessage(w http.ResponseWriter, r *http.Request, u *store.User) {
+	d, ok := s.dayFromPath(w, r)
+	if !ok {
+		return
+	}
+	if _, win := s.today(); !win.Editable(d) {
+		s.render(w, http.StatusConflict, "message.html", page{Title: "Can't change that", Message: "This day has passed.", User: u})
+		return
+	}
+	msg, problem := s.lockMessage(r)
+	if problem != "" {
+		s.render(w, http.StatusBadRequest, "message.html", page{Title: "Can't save that", Message: problem, User: u})
+		return
+	}
+	err := s.db.SetLockMessage(d, msg)
+	if errors.Is(err, store.ErrNotFound) {
+		s.render(w, http.StatusConflict, "message.html", page{Title: "Can't change that", Message: "This day isn't locked in.", User: u})
+		return
+	}
+	if err != nil {
+		s.fail(w, "Couldn't save the message.", err)
+		return
+	}
+	log.Printf("calendar: user=%d reworded %s", u.ID, d)
+	http.Redirect(w, r, dayPath(d), http.StatusSeeOther)
+}
+
+// defaultLockMessage pre-fills the lock-in form. It's only a starting point:
+// what's saved is whatever the manager leaves in the field, so a one-off
+// change of time goes in the message rather than in the settings.
+func (s *Server) defaultLockMessage() string {
+	st := s.groupSettings()
+	return "Locked in for " + st.SlotStart + " to " + st.SlotEnd
+}
+
+// lockMessage reads the lock-in message from a form. A form without the
+// field gets the default. problem, if not empty, says why it's refused.
+func (s *Server) lockMessage(r *http.Request) (msg, problem string) {
+	if _, ok := r.Form["message"]; !ok {
+		return s.defaultLockMessage(), ""
+	}
+	msg = words.Clean(r.FormValue("message"))
+	return msg, s.checkMessage(msg)
+}
+
+// checkMessage refuses a lock-in message or MOTD that's too long or trips
+// the language filter, returning why; empty means it's fine.
+func (s *Server) checkMessage(msg string) string {
+	if utf8.RuneCountInString(msg) > store.MaxMessage {
+		return fmt.Sprintf("Keep the message to %d characters or fewer.", store.MaxMessage)
+	}
+	if s.filter().Blocked(msg) {
+		return blockedMsg
+	}
+	return ""
+}
+
+// lockedSummary is the group line on a locked-in day: its message, in place
+// of the phrase about everyone's answers (#41).
+func lockedSummary(msg string) string {
+	if msg == "" {
+		return "Locked in"
+	}
+	return msg
 }
 
 // handleCancel unbooks a locked-in day.
@@ -97,12 +173,15 @@ func (s *Server) lockState(v *dayView, u *store.User) error {
 	switch {
 	case err == nil:
 		v.Locked, v.LockedOverride = true, l.Override
+		v.LockMessage = s.filter().Mask(l.Message)
+		v.Summary = lockedSummary(v.LockMessage)
 	case !errors.Is(err, store.ErrNotFound):
 		return err
 	}
 	v.Unavailable = unavailable(v.Group)
-	admin := u.IsAdmin() && v.Editable
-	v.CanLock = admin && !v.Locked
-	v.CanCancel = admin && v.Locked
+	manage := u.CanManage() && v.Editable
+	v.CanLock = manage && !v.Locked
+	v.CanCancel = manage && v.Locked
+	v.DefaultMessage, v.MaxMessage = s.defaultLockMessage(), store.MaxMessage
 	return nil
 }

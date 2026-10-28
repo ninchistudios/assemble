@@ -179,6 +179,9 @@ a { color: var(--accent); font-weight: 650; text-decoration-thickness: 2px; text
 .btn + .btn, .btn + form, form + .btn, form + form { margin-top: .75rem; }
 /* Full width like a primary button, but not competing with it. */
 .btn-secondary { background: var(--surface-2); color: var(--text); }
+/* The way back to Upcoming from a day (#35): accent, but slimmer than the
+   main actions so the status picker below stays the focus. */
+.btn-top { min-height: 40px; padding: .4rem 1rem; margin-bottom: .75rem; }
 /* Row actions: still a 40px target, but sized to the label. */
 .btn-small { width: auto; min-width: 0; min-height: 40px; padding: .4rem .8rem; font-size: .9rem; }
 form.inline { display: inline; }
@@ -306,8 +309,9 @@ input:focus-visible, select:focus-visible { outline: none; border-color: var(--a
 .status-set figcaption { margin-top: .3rem; font-size: .8rem; font-weight: 750; letter-spacing: .04em; }
 
 /* ---- notices ---------------------------------------------------------------
-   Above the page content on every signed-in page. Locked-in notices take the
-   accent like the lock banner; cancellations take the NO colour. */
+   Above the page content on every signed-in page. Locked-in notices and the
+   MOTD take the accent like the lock banner; cancellations take the NO
+   colour; a member joining, for the admin and managers, is quieter. */
 .notices { list-style: none; margin: 0 0 1rem; padding: 0; }
 .notices li {
   display: flex;
@@ -320,8 +324,9 @@ input:focus-visible, select:focus-visible { outline: none; border-color: var(--a
 }
 .notices li + li { margin-top: 6px; }
 .notices li.notice-cancelled { box-shadow: inset 4px 0 0 var(--no); }
-.notices a { flex: 1; min-width: 0; color: var(--text); text-decoration: none; font-weight: 600; }
-.notices a b { font-weight: 750; }
+.notices li.notice-joined { box-shadow: inset 4px 0 0 var(--muted); }
+.notices .notice-text { flex: 1; min-width: 0; color: var(--text); text-decoration: none; font-weight: 600; overflow-wrap: anywhere; }
+.notices .notice-text b { font-weight: 750; }
 .notices form { margin: 0; }
 .notices button {
   display: flex;
@@ -413,12 +418,28 @@ span.day-step { background: none; }
 .group .note:empty { display: none; }
 
 .summary { display: block; font-size: .85rem; font-weight: 600; margin-top: .15rem; }
+/* On a locked-in day the group line is the lock-in message (#41). */
+.summary.locked { color: var(--accent); font-size: 1rem; }
+
+/* Lock in, with the message the group will see. */
+.lock-form { margin-top: 1.5rem; }
+.lock-form .hint { margin: .35rem 0 .75rem; color: var(--muted); font-size: .85rem; }
+.msg-row { display: flex; gap: 8px; margin-bottom: .75rem; }
+.msg-row input { flex: 1; min-width: 0; }
+.msg-row .btn { margin: 0; }
+.motd-form { padding-bottom: 1.25rem; margin-bottom: 1.25rem; border-bottom: 2px solid var(--line); }
+.motd-form .msg-row { margin-bottom: 0; }
 .group .mini .status { width: 32px; height: 32px; }
 .group .status-word { color: var(--muted); font-size: .8rem; font-weight: 750; letter-spacing: .04em; }
 .group li[data-me] { box-shadow: inset 3px 0 0 var(--accent); }
 
 .menu { display: flex; gap: 1.25rem; align-items: center; margin-top: 2rem; }
 .menu form { margin: 0; }
+
+/* Help (#36). */
+.help-status b { font-weight: 750; letter-spacing: .04em; }
+.help-list { padding-left: 1.2rem; }
+.help-list li + li { margin-top: .5rem; }
 .signed-in { font-size: .85rem; margin-top: .5rem; }
 /* A form button that reads as a link, for actions like Sign out. */
 button.link {

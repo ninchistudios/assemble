@@ -1,0 +1,31 @@
+{{define "help.html"}}{{template "top" .}}
+<h2>Help</h2>
+<p>{{.Group.GroupName}} uses assemble to find the days everyone can make. Each day has one session, {{.Group.SlotStart}}–{{.Group.SlotEnd}} ({{.Group.Timezone}}). Say which days you can make, and when everyone can, a manager locks one in.</p>
+
+<h3>Your answers</h3>
+<ul class="rows group help-status">
+<li><span class="mini">{{template "status" "yes"}}</span><span class="grow"><b>YES</b><span class="meta">You can make it, and you'd like to.</span></span></li>
+<li><span class="mini">{{template "status" "ok"}}</span><span class="grow"><b>OK</b><span class="meta">You can make it, but it's not your first choice.</span></span></li>
+<li><span class="mini">{{template "status" "no"}}</span><span class="grow"><b>NO</b><span class="meta">You can't make it.</span></span></li>
+<li><span class="mini">{{template "status" "unknown"}}</span><span class="grow"><b>?</b><span class="meta">Not sure, or not answered yet. Counts as not available for locking in.</span></span></li>
+</ul>
+
+<h3>Good habits</h3>
+<ul class="help-list">
+<li><b>Answer every day, not just your YES days.</b> A day you skip shows as ?, so nobody can tell whether you've thought about it.</li>
+<li><b>Use NO sparingly.</b> One NO rules the day out for everyone. If you could make it at a push, say OK.</li>
+<li><b>Add a note when there's a catch,</b> e.g. "can't get there until 8". The whole group sees your notes.</li>
+<li><b>You can always change your answer,</b> right up until the day is over.</li>
+</ul>
+
+<h3>Locked-in days</h3>
+<p>A padlock means a manager has locked the day in: the group is meeting. Its message says when, and notes any change of time or place.</p>
+<p>Changing a locked-in day from YES or OK to NO or ? cancels it for everyone. You'll be asked first, and the whole group is notified.</p>
+
+<h3>Notifications</h3>
+<p>Lock-ins, cancellations and messages from the admin show at the top of your pages until you dismiss them with the cross.</p>
+
+<h3>Getting around</h3>
+<p>Home is the next two months at a glance. The bar shows everyone else's answers, and the icon beside it is yours. Tap a day to answer it, then swipe left or right (or use the arrows) to move between days.</p>
+{{template "menu" .}}
+{{template "bottom" .}}{{end}}

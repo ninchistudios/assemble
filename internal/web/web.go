@@ -96,16 +96,20 @@ func (s *Server) bindExistingAdmin() error {
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) { s.handler.ServeHTTP(w, r) }
 
 func (s *Server) routes() {
-	// Calendar. Home is today.
-	s.mux.HandleFunc("GET /{$}", s.requireUser(s.handleToday))
+	// Calendar. Home is the upcoming days (#35); today is the top row.
+	s.mux.HandleFunc("GET /{$}", s.requireUser(s.handleUpcoming))
 	s.mux.HandleFunc("GET /day/{date}", s.requireUser(s.handleDay))
-	s.mux.HandleFunc("GET /upcoming", s.requireUser(s.handleUpcoming))
+	s.mux.HandleFunc("GET /upcoming", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/", http.StatusMovedPermanently) // its 2026.2 address
+	})
+	s.mux.HandleFunc("GET /help", s.requireUser(s.handleHelp))
 	s.mux.HandleFunc("GET /profile", s.requireUser(s.handleProfile))
 	s.mux.HandleFunc("POST /profile", s.requireUser(s.handleProfilePost))
 	s.mux.HandleFunc("POST /day/{date}/status", s.requireUser(s.handleSetStatus))
 	s.mux.HandleFunc("POST /day/{date}/note", s.requireUser(s.handleSetNote))
-	s.mux.HandleFunc("POST /day/{date}/lock", s.requireAdmin(s.handleLock))
-	s.mux.HandleFunc("POST /day/{date}/cancel", s.requireAdmin(s.handleCancel))
+	s.mux.HandleFunc("POST /day/{date}/lock", s.requireManager(s.handleLock))
+	s.mux.HandleFunc("POST /day/{date}/cancel", s.requireManager(s.handleCancel))
+	s.mux.HandleFunc("POST /day/{date}/message", s.requireManager(s.handleLockMessage))
 	s.mux.HandleFunc("POST /notices/{id}/dismiss", s.requireUser(s.handleDismiss))
 	s.mux.HandleFunc("GET /style", s.requireAdmin(s.handleStyle))
 
@@ -113,12 +117,15 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /admin", s.requireAdmin(s.handleAdmin))
 	s.mux.HandleFunc("GET /admin/group", s.requireAdmin(s.handleGroup))
 	s.mux.HandleFunc("POST /admin/group", s.requireAdmin(s.handleGroupPost))
+	s.mux.HandleFunc("POST /admin/motd", s.requireAdmin(s.handleMOTDPost))
 	s.mux.HandleFunc("GET /admin/invites", s.requireAdmin(s.handleInvites))
 	s.mux.HandleFunc("POST /admin/invites", s.requireAdmin(s.handleInviteCreate))
 	s.mux.HandleFunc("POST /admin/invites/{id}/disable", s.requireAdmin(s.handleInviteDisable))
 	s.mux.HandleFunc("GET /admin/members", s.requireAdmin(s.handleMembers))
 	s.mux.HandleFunc("POST /admin/members/{id}/disable", s.requireAdmin(s.handleMemberAccess(false)))
 	s.mux.HandleFunc("POST /admin/members/{id}/enable", s.requireAdmin(s.handleMemberAccess(true)))
+	s.mux.HandleFunc("POST /admin/members/{id}/grant-manager", s.requireAdmin(s.handleMemberManager(true)))
+	s.mux.HandleFunc("POST /admin/members/{id}/revoke-manager", s.requireAdmin(s.handleMemberManager(false)))
 
 	// Sign-in flow.
 	s.mux.HandleFunc("GET /auth/login", s.handleLogin)
@@ -166,6 +173,7 @@ type page struct {
 
 	// Admin forms.
 	Form    store.Settings
+	MOTD    string
 	Zones   []string
 	Saved   bool
 	Invites []inviteRow
@@ -177,6 +185,7 @@ type page struct {
 	Upcoming []upcomingRow
 
 	MaxDisplayName int
+	MaxMessage     int
 	StatusIcons    []string // icon names, for the day page script to copy
 
 	DevBypass bool
@@ -337,6 +346,12 @@ func (s *Server) staticHandler() http.Handler {
 
 func (s *Server) notFound(w http.ResponseWriter) {
 	s.render(w, http.StatusNotFound, "message.html", page{Title: "Not found", Message: "There's nothing here."})
+}
+
+// handleHelp explains the statuses and the rules (#36). Members only: it
+// talks about this group's own timeslot.
+func (s *Server) handleHelp(w http.ResponseWriter, r *http.Request, u *store.User) {
+	s.render(w, http.StatusOK, "help.html", page{Title: "Help", User: u})
 }
 
 // handleStyle shows the palette, type and icons on a real device. See

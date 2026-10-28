@@ -10,5 +10,5 @@
 {{if .Locked}}{{template "lock-icon"}}<span class="sr-only">Locked in</span>{{else}}<span class="lock-gap"></span>{{end}}
 </a></li>
 {{end}}</ul>
-<nav class="menu"><a href="/">Today</a></nav>
+{{template "menu" .}}
 {{template "bottom" .}}{{end}}

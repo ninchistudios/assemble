@@ -111,4 +111,41 @@ CREATE TABLE dismissals (
 	`
 ALTER TABLE settings ADD COLUMN banned_words TEXT NOT NULL DEFAULT '';
 `,
+
+	// 5: 2026.3. Managers (#39) can lock in and cancel; the admin always can,
+	// whatever this flag says. A lock-in carries its message (#41). Notices
+	// gain kinds that aren't about a day (#38 joins, #40 the MOTD) and an
+	// audience, which the old CHECK and NOT NULL can't take, so the table is
+	// rebuilt. dismissals points at it and would be emptied by the cascade
+	// when the old table is dropped, so its rows are set aside and restored.
+	`
+ALTER TABLE users   ADD COLUMN manager INTEGER NOT NULL DEFAULT 0 CHECK (manager IN (0, 1));
+ALTER TABLE lockins ADD COLUMN message TEXT    NOT NULL DEFAULT '';
+
+CREATE TABLE dismissals_keep AS SELECT notification_id, user_id FROM dismissals;
+DROP TABLE dismissals;
+
+CREATE TABLE notifications_new (
+  id         INTEGER PRIMARY KEY,
+  kind       TEXT    NOT NULL CHECK (kind IN ('locked', 'cancelled', 'joined', 'motd')),
+  day        TEXT,  -- NULL for a notice not about a day: it never expires
+  audience   TEXT    NOT NULL DEFAULT 'all' CHECK (audience IN ('all', 'managers')),
+  body       TEXT    NOT NULL DEFAULT '',  -- the MOTD's text
+  actor_id   INTEGER REFERENCES users(id),
+  created_at TEXT    NOT NULL
+);
+INSERT INTO notifications_new (id, kind, day, actor_id, created_at)
+SELECT id, kind, day, actor_id, created_at FROM notifications;
+DROP TABLE notifications;
+ALTER TABLE notifications_new RENAME TO notifications;
+CREATE INDEX notifications_day ON notifications(day);
+
+CREATE TABLE dismissals (
+  notification_id INTEGER NOT NULL REFERENCES notifications(id) ON DELETE CASCADE,
+  user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  PRIMARY KEY (notification_id, user_id)
+);
+INSERT INTO dismissals SELECT notification_id, user_id FROM dismissals_keep;
+DROP TABLE dismissals_keep;
+`,
 }

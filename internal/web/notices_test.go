@@ -84,3 +84,68 @@ func noticeIDs(body string) []string {
 	}
 	return ids
 }
+
+// The admin and managers hear who joined; nobody else does (#38).
+func TestJoinNotice(t *testing.T) {
+	e, admin := dayEnv(t)
+	m, mgr := e.memberSession(t, "m1")
+	e.db.SetManager(m.ID, true)
+	_, jo := e.memberSession(t, "jo")
+	a, _ := e.db.UserBySub(adminID.Sub)
+	e.db.CreateInvite("tok", a.ID, fixedNow)
+	e.db.JoinViaInvite("tok", "sub-sam", "sam@example.com", "Sam", fixedNow)
+
+	for name, c := range map[string]*http.Cookie{"admin": admin, "manager": mgr} {
+		body := e.get(t, "/", c).Body.String()
+		if !strings.Contains(body, `<span class="notice-text"><b>Sam joined the group</b></span>`) {
+			t.Errorf("%s doesn't see the join notice, or it links somewhere", name)
+		}
+	}
+	if body := e.get(t, "/", jo).Body.String(); strings.Contains(body, "joined the group") {
+		t.Error("a plain member sees the join notice")
+	}
+}
+
+// The admin posts a MOTD; everyone sees it until they dismiss it, and a
+// new one shows again (#40).
+func TestMOTDNotice(t *testing.T) {
+	e, admin := dayEnv(t)
+	_, jo := e.memberSession(t, "jo")
+
+	if rec := e.do(t, http.MethodPost, "/admin/motd", url.Values{"motd": {"Gig on the 30th!"}}, jo); rec.Code != http.StatusForbidden {
+		t.Errorf("member posting a MOTD = %d, want 403", rec.Code)
+	}
+	rec := e.do(t, http.MethodPost, "/admin/motd", url.Values{"motd": {"Gig on the 30th!"}}, admin)
+	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/admin/group?motd=posted" {
+		t.Fatalf("post MOTD = %d -> %s", rec.Code, rec.Header().Get("Location"))
+	}
+	if body := e.get(t, "/admin/group", admin).Body.String(); !strings.Contains(body, `id="motd" name="motd" type="text" maxlength="100" value="Gig on the 30th!"`) {
+		t.Error("admin form doesn't show the current MOTD")
+	}
+	body := e.get(t, "/", jo).Body.String()
+	if !strings.Contains(body, "<b>Gig on the 30th!</b> <span class=\"muted\">by Ada</span>") {
+		t.Fatalf("Jo doesn't see the MOTD:\n%s", body)
+	}
+	for _, id := range noticeIDs(body) {
+		e.do(t, http.MethodPost, "/notices/"+id+"/dismiss", url.Values{}, jo)
+	}
+	if body := e.get(t, "/", jo).Body.String(); strings.Contains(body, "Gig on the 30th!") {
+		t.Error("dismissed MOTD still shown")
+	}
+	e.do(t, http.MethodPost, "/admin/motd", url.Values{"motd": {"Gig moved to the 31st"}}, admin)
+	body = e.get(t, "/", jo).Body.String()
+	if !strings.Contains(body, "Gig moved to the 31st") || strings.Contains(body, "Gig on the 30th!") {
+		t.Error("a new MOTD doesn't replace the old one for Jo")
+	}
+
+	if rec := e.do(t, http.MethodPost, "/admin/motd", url.Values{"motd": {strings.Repeat("x", 101)}}, admin); rec.Code != http.StatusBadRequest {
+		t.Errorf("101-character MOTD = %d, want 400", rec.Code)
+	}
+	rec = e.do(t, http.MethodPost, "/admin/motd", url.Values{"motd": {""}}, admin)
+	if rec.Header().Get("Location") != "/admin/group?motd=removed" {
+		t.Errorf("clearing the MOTD -> %s", rec.Header().Get("Location"))
+	}
+	if body := e.get(t, "/", jo).Body.String(); strings.Contains(body, "Gig moved") {
+		t.Error("removed MOTD still shown")
+	}
+}

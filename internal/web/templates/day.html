@@ -1,5 +1,6 @@
 {{define "day.html"}}{{template "top" .}}
 {{with .DayView}}
+<a class="btn btn-top" href="/">See all upcoming</a>
 <div class="day-head">
 <a class="day-step" href="/day/{{.Prev}}" rel="prev" aria-label="Previous day">‹</a>
 <div class="day-title">
@@ -26,25 +27,28 @@
 </form>{{end}}
 <p class="picker-error notice error" role="alert" hidden></p>
 
-<h3>The group <span class="summary muted">{{.Summary}}</span></h3>
+<h3>The group <span class="summary{{if .Locked}} locked{{else}} muted{{end}}">{{.Summary}}</span></h3>
 <ul class="rows group">
 {{range .Group}}<li{{if .Me}} data-me{{end}} data-status="{{.Status.Icon}}"><span class="mini">{{template "status" .Status.Icon}}</span><span class="grow">{{.Name}}{{if .Me}} <span class="muted">(you)</span>{{end}}<span class="meta note">{{.Note}}</span></span><span class="status-word">{{.Status.Label}}</span></li>
 {{end}}</ul>
 {{range $.StatusIcons}}<template id="icon-{{.}}">{{template "status" .}}</template>{{end}}
 
-{{if .CanLock}}<form method="post" action="/day/{{.Day}}/lock"{{if .Unavailable}} data-confirm="Not everyone can make it: {{.Unavailable}}. Lock in anyway?" data-override{{end}}>
+{{if .CanLock}}<form class="lock-form" method="post" action="/day/{{.Day}}/lock"{{if .Unavailable}} data-confirm="Not everyone can make it: {{.Unavailable}}. Lock in anyway?" data-override{{end}}>
+<label for="lock-message">Lock-in message</label>
+<input id="lock-message" name="message" type="text" maxlength="{{.MaxMessage}}" value="{{.DefaultMessage}}" autocomplete="off">
+<p class="hint">Shown to the group on this day. Note any change of time or place.</p>
 <button class="btn" type="submit">Lock in this day</button>
 </form>{{end}}
-{{if .CanCancel}}<form method="post" action="/day/{{.Day}}/cancel" data-confirm="Cancel the locked-in session on {{.Label}}? Everyone will be notified.">
+{{if .CanCancel}}<form class="lock-form" method="post" action="/day/{{.Day}}/message">
+<label for="lock-message">Lock-in message</label>
+<div class="msg-row"><input id="lock-message" name="message" type="text" maxlength="{{.MaxMessage}}" value="{{.LockMessage}}" autocomplete="off">
+<button class="btn btn-quiet btn-small" type="submit">Save</button></div>
+</form>
+<form method="post" action="/day/{{.Day}}/cancel" data-confirm="Cancel the locked-in session on {{.Label}}? Everyone will be notified.">
 <button class="btn btn-danger" type="submit">Cancel the locked-in session</button>
 </form>{{end}}
-<a class="btn btn-secondary" href="/upcoming">Upcoming</a>
 {{end}}
 
-<nav class="menu">
-{{if .User.IsAdmin}}<a href="/admin">Admin</a>{{end}}
-<form method="post" action="/auth/logout"><button type="submit" class="link">Sign out</button></form>
-</nav>
-<p class="muted signed-in">Signed in as <span class="me">{{.User.Name}}</span> <a href="/profile">change display name</a></p>
+{{template "menu" .}}
 <script src="/static/day.js" defer></script>
 {{template "bottom" .}}{{end}}

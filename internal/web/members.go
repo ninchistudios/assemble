@@ -16,6 +16,7 @@ type memberRow struct {
 	Email   string
 	Joined  string
 	Admin   bool
+	Manager bool
 	Enabled bool
 	You     bool
 }
@@ -33,10 +34,41 @@ func (s *Server) handleMembers(w http.ResponseWriter, r *http.Request, u *store.
 		rows = append(rows, memberRow{
 			ID: m.ID, Name: f.Mask(m.Name), Email: m.Email,
 			Joined: shortDate(m.CreatedAt, loc),
-			Admin:  m.IsAdmin(), Enabled: m.Enabled, You: m.ID == u.ID,
+			Admin:  m.IsAdmin(), Manager: m.Manager, Enabled: m.Enabled, You: m.ID == u.ID,
 		})
 	}
 	s.render(w, http.StatusOK, "members.html", page{Title: "Members", Tab: "members", User: u, Members: rows})
+}
+
+// handleMemberManager returns the handler that grants or revokes the manager
+// flag for the member named in the path (#39). The admin can always manage,
+// so the flag isn't offered on them.
+func (s *Server) handleMemberManager(grant bool) userHandler {
+	return func(w http.ResponseWriter, r *http.Request, u *store.User) {
+		id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+		if err != nil {
+			s.render(w, http.StatusNotFound, "message.html", page{Title: "Not found", Message: "There's no such member.", User: u})
+			return
+		}
+		m, err := s.db.UserByID(id)
+		if errors.Is(err, store.ErrNotFound) {
+			s.render(w, http.StatusNotFound, "message.html", page{Title: "Not found", Message: "There's no such member.", User: u})
+			return
+		} else if err != nil {
+			s.fail(w, "Couldn't change that member's role.", err)
+			return
+		}
+		if m.IsAdmin() {
+			s.render(w, http.StatusBadRequest, "message.html", page{Title: "Already the admin", Message: "The admin can always lock in and cancel.", User: u})
+			return
+		}
+		if err := s.db.SetManager(id, grant); err != nil {
+			s.fail(w, "Couldn't change that member's role.", err)
+			return
+		}
+		log.Printf("admin: user=%d set user=%d manager=%v", u.ID, id, grant)
+		http.Redirect(w, r, "/admin/members", http.StatusSeeOther)
+	}
 }
 
 // handleMemberAccess returns the handler that enables or disables the member

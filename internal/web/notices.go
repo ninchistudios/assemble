@@ -17,26 +17,34 @@ type noticeView struct {
 	Kind string
 	Text string
 	Meta string
-	Href string
+	Href string // empty for a notice with nowhere to go
 }
 
 // noticesFor loads the signed-in member's live notices. A failure is logged
 // and the page shown without them, rather than failing the page.
 func (s *Server) noticesFor(u *store.User, f *words.Filter) []noticeView {
 	today, _ := s.today()
-	ns, err := s.db.Notices(u.ID, today)
+	ns, err := s.db.Notices(u.ID, u.CanManage(), today)
 	if err != nil {
 		log.Printf("notices user=%d: %v", u.ID, err)
 		return nil
 	}
 	out := make([]noticeView, 0, len(ns))
 	for _, n := range ns {
-		v := noticeView{ID: n.ID, Kind: n.Kind, Href: dayPath(n.Day)}
+		v := noticeView{ID: n.ID, Kind: n.Kind}
 		switch n.Kind {
+		case store.NoticeJoined:
+			// Who joined is the news, so there's no "by". No link: the
+			// members page is the admin's alone.
+			v.Text = f.Mask(n.ActorName) + " joined the group"
+			out = append(out, v)
+			continue
+		case store.NoticeMOTD:
+			v.Text = f.Mask(n.Body)
 		case store.NoticeLocked:
-			v.Text = "Locked in: " + n.Day.Short()
+			v.Text, v.Href = "Locked in: "+n.Day.Short(), dayPath(n.Day)
 		default:
-			v.Text = "Cancelled: " + n.Day.Short()
+			v.Text, v.Href = "Cancelled: "+n.Day.Short(), dayPath(n.Day)
 		}
 		switch {
 		case n.ActorID == u.ID:

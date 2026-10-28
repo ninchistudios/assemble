@@ -182,3 +182,65 @@ func TestPullingOutByFormGetsAConfirmPage(t *testing.T) {
 		t.Error("still locked in")
 	}
 }
+
+// The lock-in form is pre-filled from the timeslot; what's saved is what the
+// manager left there, and it replaces the group line on the day (#41).
+func TestLockInMessage(t *testing.T) {
+	e, admin := dayEnv(t)
+	_, jo := e.memberSession(t, "jo")
+	e.do(t, http.MethodPost, "/day/2026-11-20/status", url.Values{"status": {"yes"}}, admin)
+	e.do(t, http.MethodPost, "/day/2026-11-20/status", url.Values{"status": {"yes"}}, jo)
+
+	body := e.get(t, "/day/2026-11-20", admin).Body.String()
+	if !strings.Contains(body, `name="message" type="text" maxlength="100" value="Locked in for 19:00 to 22:00"`) {
+		t.Fatal("lock-in form isn't pre-filled from the timeslot")
+	}
+	e.do(t, http.MethodPost, "/day/2026-11-20/lock", url.Values{"message": {"  From 8pm   at the studio "}}, admin)
+	body = e.get(t, "/day/2026-11-20", jo).Body.String()
+	if !strings.Contains(body, `class="summary locked">From 8pm at the studio<`) || strings.Contains(body, "Ready to lock in!") {
+		t.Error("the lock-in message doesn't replace the group line")
+	}
+	// It stays the group line when an answer changes without pulling out.
+	if _, got := setStatusJSON(e, jo, "ok", false); got["summary"] != "From 8pm at the studio" {
+		t.Errorf("summary after a change = %v", got["summary"])
+	}
+
+	// Reworded by a manager: no notice for anyone.
+	notices := len(noticeIDs(e.get(t, "/", jo).Body.String()))
+	if rec := e.do(t, http.MethodPost, "/day/2026-11-20/message", url.Values{"message": {"From 8:30pm"}}, admin); rec.Code != http.StatusSeeOther {
+		t.Fatalf("reword = %d", rec.Code)
+	}
+	if body := e.get(t, "/day/2026-11-20", jo).Body.String(); !strings.Contains(body, ">From 8:30pm<") {
+		t.Error("reworded message not shown")
+	}
+	if n := len(noticeIDs(e.get(t, "/", jo).Body.String())); n != notices {
+		t.Errorf("rewording made notices: %d, was %d", n, notices)
+	}
+	if rec := e.do(t, http.MethodPost, "/day/2026-11-20/message", url.Values{"message": {"mine now"}}, jo); rec.Code != http.StatusForbidden {
+		t.Errorf("member rewording = %d, want 403", rec.Code)
+	}
+	if rec := e.do(t, http.MethodPost, "/day/2026-11-21/message", url.Values{"message": {"x"}}, admin); rec.Code != http.StatusConflict {
+		t.Errorf("rewording an unlocked day = %d, want 409", rec.Code)
+	}
+	if rec := e.do(t, http.MethodPost, "/day/2026-11-20/message", url.Values{"message": {strings.Repeat("x", 101)}}, admin); rec.Code != http.StatusBadRequest {
+		t.Errorf("101-character message = %d, want 400", rec.Code)
+	}
+	e.db.SaveSettings(store.Settings{GroupName: "Band", SlotStart: "19:00", SlotEnd: "22:00", Timezone: "UTC", BannedWords: "heck"}, fixedNow)
+	if rec := e.do(t, http.MethodPost, "/day/2026-11-20/message", url.Values{"message": {"what the heck"}}, admin); rec.Code != http.StatusBadRequest {
+		t.Errorf("filtered message = %d, want 400", rec.Code)
+	}
+}
+
+// An override's confirm page carries the message through.
+func TestLockInMessageSurvivesOverrideConfirm(t *testing.T) {
+	e, admin := dayEnv(t)
+	e.memberSession(t, "jo")
+	rec := e.do(t, http.MethodPost, "/day/2026-11-20/lock", url.Values{"message": {"Short one, 8 to 9"}}, admin)
+	if rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), `name="message" value="Short one, 8 to 9"`) {
+		t.Fatalf("override confirm = %d, without the message", rec.Code)
+	}
+	e.do(t, http.MethodPost, "/day/2026-11-20/lock", url.Values{"override": {"1"}, "message": {"Short one, 8 to 9"}}, admin)
+	if l, _ := e.db.LockinFor("2026-11-20"); l.Message != "Short one, 8 to 9" {
+		t.Errorf("message = %q", l.Message)
+	}
+}
