@@ -122,7 +122,7 @@ Admin and member each on their own device or browser.
 
 | # | Action | Expect |
 |---|---|---|
-| K1 | **See all upcoming** from a day, or the logo in the header | Two months of days under month headings, each with "Others" and "You" over the columns. Each row has a bar of the other members' answers and your own status. Locked-in days have a padlock and a wisteria outline; days everyone can make have a green outline. |
+| K1 | **See all upcoming** from a day, or the logo in the header | Two months of days under month headings, each with "Others" and "You" over the columns. Each row has a bar of the other members' answers and your own status. Locked-in days have a green padlock and a green outline; days everyone can make, which could be locked in, have a wisteria outline. |
 | K2 | Tap a row | That day opens. |
 | K3 | Tap **change display name** next to **Signed in as**. Set a display name and save | **Saved**. The group list and other members now show the new name. |
 | K4 | Sign out and back in | The display name is kept, not replaced by your Google name. |
@@ -149,7 +149,7 @@ Admin, the member from F and a second member, each on their own device or browse
 | M11 | The admin posts different text | It's back for everyone, with the new text. The old one has gone. |
 | M12 | The admin empties the field and posts | **Message of the day removed.** It's gone for everyone. |
 | M13 | A message over 100 characters, or one with a filtered word | Refused with a message, for both the MOTD and a lock-in message. |
-| M14 | **Help** in the menu | The four answers with their icons, the good habits, locked-in days and notices. Signed out, `/help` asks you to sign in. |
+| M14 | **Help** in the menu | The four answers with their icons, the good habits, locked-in days and notices. "assemble" in the first line opens the GitHub repo in a new tab. Signed out, `/help` asks you to sign in. |
 | M15 | Open the old address `/upcoming` | Lands on home. |
 
 ## L. Phone and look

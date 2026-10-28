@@ -7,7 +7,7 @@ The visual style for every page. To see it on a real device, sign in as admin an
 - **Flat and vector.** No gradients, shadows or textures. Icons are inline SVG, so they stay sharp at any size and take their colours from the theme.
 - **Dark first.** Dark is the default theme. Light and other themes come later, built on the same tokens.
 - **Phone first.** Designed at 360px wide and checked at 360 and 412. Touch targets are at least 48px. There is never horizontal scrolling.
-- **Few taps.** The main task, setting your availability for a day (2026.2), should take one tap.
+- **Few taps.** The main task, setting your availability for a day, takes one tap once the day is open. From home (Upcoming, since 2026.3) that's two: the day, then the status.
 - **Nothing third-party.** The font, icons and styles are all embedded in the binary. The Content Security Policy blocks inline styles and scripts, so styling goes in `assemble.css` and never in `style=` attributes.
 
 ## Tokens and themes
@@ -55,7 +55,7 @@ The palette is small and distinctive, and it avoids primary colours. Status colo
 
 - **Picker:** in a choice of status, the chosen option is filled and its button gets a solid border in the same status colour. The other options are outlined, with the glyph drawn in the status colour. The shape stays the same and only the fill changes.
 - **Sizes:** 48px for anything you tap, 28px (`.small`) for display only.
-- **Other icons, same frame:** a padlock (`lock-icon`) for locked-in days, filled with `--accent`; a cross (`x-icon`) to dismiss a notice. The footer's GitHub mark (`github-icon`, from Octicons) is the one exception to the square frame, because it's GitHub's own mark.
+- **Other icons, same frame:** a padlock (`lock-icon`) for locked-in days, filled with `--yes`; a cross (`x-icon`) to dismiss a notice. The footer's GitHub mark (`github-icon`, from Octicons) is the one exception to the square frame, because it's GitHub's own mark.
 - **Where they live:** `templates/icons.html` (`status`, `status-off`, `mark`, `lock-icon`, `x-icon`, `github-icon`). The favicon `static/icon.svg` repeats the mark with literal colours, because a favicon can't read CSS variables.
 
 ## Typography
@@ -89,11 +89,11 @@ The calendar adds these (2026.2):
 
 - **Status picker:** `.picker`, four equal buttons with the status icon at 56px. Each button holds both the filled and outlined icon. `aria-pressed` decides which shows, so the script changes one attribute and the page never redraws.
 - **Group list:** `.rows.group`, one row per member with a 32px status icon, their name, their note as `.meta` and the status word. The viewer's own row has an accent edge.
-- **Lock banner:** `.lock-banner`, an accent outline with the padlock. Locked-in is a booking, not anyone's answer, so it uses the accent rather than a status colour.
-- **Notices:** `.notices`, at the top of every signed-in page. Locked-in notices and the MOTD have an accent edge, cancellations a coral one, and a member joining a muted one. A notice about a day links to it; the others are plain text (`.notice-text` either way) and wrap as needed. Each has a 44px dismiss target.
-- **Upcoming rows:** `.up-row`, the date, a `.bar` of one equal segment per other member (yes, ok, no, ? in that order, so no inline widths) and the viewer's own status. Each month heading carries the column headings "Others" and "You", centred over their columns. A wisteria outline means locked in; a sage outline means everyone can make it.
-- **Lock-in message (2026.3):** `.lock-form`, a labelled field above **Lock in this day**, or with a small **Save** beside it (`.msg-row`) to reword it on a locked-in day. On a locked-in day the group line (`.summary.locked`) is the message, in the accent at body size.
+- **Lock banner:** `.lock-banner`, a sage (`--yes`) outline with the padlock. Since 2026.3, locked in is sage, the outcome everyone's answers were for, and the accent marks a day that could be locked in (#35).
+- **Notices:** `.notices`, at the top of every signed-in page. Locked-in notices have a sage edge, the MOTD an accent one, cancellations a coral one, and a member joining a muted one. A notice about a day links to it; the others are plain text (`.notice-text` either way) and wrap as needed. Each has a 44px dismiss target.
+- **Upcoming rows:** `.up-row`, the date, a `.bar` of one equal segment per other member (yes, ok, no, ? in that order, so no inline widths) and the viewer's own status. Each month heading carries the column headings "Others" and "You", centred over their columns. A sage outline means locked in; a wisteria outline means everyone can make it, so it could be locked in.
+- **Lock-in message (2026.3):** `.lock-form`, a labelled field above **Lock in this day**, or with a small **Save** beside it (`.msg-row`) to reword it on a locked-in day. On a locked-in day the group line (`.summary.locked`) is the message, in sage at body size.
 - **Menu:** the `menu` template, at the foot of home, a day and Help: Admin (admin only), Help and Sign out, then **Signed in as**.
-- **Help:** `help.html` reuses the group rows for the four statuses, each with its icon and meaning.
+- **Help:** `help.html` reuses the group rows for the four statuses, each with its icon and meaning. "assemble" in its first line links to the repo in a new tab, like the footer's GitHub mark.
 - **MOTD form:** at the top of **Admin → Group**, set apart from the settings by a rule (`.motd-form`).
 - **Local band:** `body.env-local` gives the header a full-width `--env-local` band and a coral **LOCAL** tag when the base URL is localhost.

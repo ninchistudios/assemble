@@ -81,7 +81,7 @@ A locked-in day is a booking: the group meets that day.
 
    | When | Phrase |
    |---|---|
-   | The day is locked in | Its message (#41), in the accent |
+   | The day is locked in | Its message (#41), in sage |
    | Anyone is [NO] | "*n* can't make it" |
    | Everyone, me included, is [YES]/[OK] | "Ready to lock in!" |
    | Everyone else is in, and I haven't said | "All others are in, great option!" |

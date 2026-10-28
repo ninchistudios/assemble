@@ -309,9 +309,10 @@ input:focus-visible, select:focus-visible { outline: none; border-color: var(--a
 .status-set figcaption { margin-top: .3rem; font-size: .8rem; font-weight: 750; letter-spacing: .04em; }
 
 /* ---- notices ---------------------------------------------------------------
-   Above the page content on every signed-in page. Locked-in notices and the
-   MOTD take the accent like the lock banner; cancellations take the NO
-   colour; a member joining, for the admin and managers, is quieter. */
+   Above the page content on every signed-in page. Locked-in notices take
+   the YES colour like the lock banner; the MOTD takes the accent;
+   cancellations take the NO colour; a member joining, for the admin and
+   managers, is quieter. */
 .notices { list-style: none; margin: 0 0 1rem; padding: 0; }
 .notices li {
   display: flex;
@@ -323,6 +324,7 @@ input:focus-visible, select:focus-visible { outline: none; border-color: var(--a
   box-shadow: inset 4px 0 0 var(--accent);
 }
 .notices li + li { margin-top: 6px; }
+.notices li.notice-locked { box-shadow: inset 4px 0 0 var(--yes); }
 .notices li.notice-cancelled { box-shadow: inset 4px 0 0 var(--no); }
 .notices li.notice-joined { box-shadow: inset 4px 0 0 var(--muted); }
 .notices .notice-text { flex: 1; min-width: 0; color: var(--text); text-decoration: none; font-weight: 600; overflow-wrap: anywhere; }
@@ -395,8 +397,8 @@ span.day-step { background: none; }
 .pick:disabled { cursor: default; opacity: .55; }
 .picker-error { margin-top: -.25rem; }
 
-/* Locked in: the accent rather than a status colour, because a booking is a
-   different kind of thing from anyone's answer. */
+/* Locked in: the YES colour, because it's the outcome everyone's answers
+   were for. The accent marks a day that could be locked in (#35). */
 .lock-banner {
   display: flex;
   align-items: center;
@@ -405,12 +407,12 @@ span.day-step { background: none; }
   margin: 0 0 1rem;
   border-radius: var(--radius);
   background: var(--surface);
-  box-shadow: inset 0 0 0 2px var(--accent);
+  box-shadow: inset 0 0 0 2px var(--yes);
 }
 .lock-icon { width: 36px; height: 36px; flex: none; }
-.lock-icon rect:first-child { fill: var(--accent); }
-.lock-icon path { fill: none; stroke: var(--on-accent); stroke-width: 4; stroke-linecap: round; }
-.lock-icon .body { fill: var(--on-accent); }
+.lock-icon rect:first-child { fill: var(--yes); }
+.lock-icon path { fill: none; stroke: var(--on-status); stroke-width: 4; stroke-linecap: round; }
+.lock-icon .body { fill: var(--on-status); }
 
 .note-form { display: flex; gap: 8px; margin: -.25rem 0 1rem; }
 .note-form input { flex: 1; min-width: 0; }
@@ -419,7 +421,7 @@ span.day-step { background: none; }
 
 .summary { display: block; font-size: .85rem; font-weight: 600; margin-top: .15rem; }
 /* On a locked-in day the group line is the lock-in message (#41). */
-.summary.locked { color: var(--accent); font-size: 1rem; }
+.summary.locked { color: var(--yes); font-size: 1rem; }
 
 /* Lock in, with the message the group will see. */
 .lock-form { margin-top: 1.5rem; }
@@ -499,8 +501,8 @@ button.link {
   text-decoration: none;
   font-weight: 600;
 }
-.up-row.all { box-shadow: inset 0 0 0 2px var(--yes); }
-.up-row.locked { box-shadow: inset 0 0 0 2px var(--accent); }
+.up-row.all { box-shadow: inset 0 0 0 2px var(--accent); }
+.up-row.locked { box-shadow: inset 0 0 0 2px var(--yes); }
 .up-date { width: 6.6rem; flex: none; white-space: nowrap; font-size: .95rem; }
 .up-date.today { color: var(--accent); font-weight: 800; }
 .bar { flex: 1; min-width: 0; display: flex; gap: 2px; height: 14px; }
