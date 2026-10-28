@@ -108,7 +108,7 @@ Previous and next day are the arrows either side of the date.
 
 ## Storage
 
-Migration 3 (2026.2) and migration 5 (2026.3), in `internal/store/schema.go`:
+Migration 3 (2026.2) and migrations 5 and 6 (2026.3), in `internal/store/schema.go`:
 
 | Table | Key | Holds |
 |---|---|---|
@@ -120,5 +120,7 @@ Migration 3 (2026.2) and migration 5 (2026.3), in `internal/store/schema.go`:
 | `users.manager` | (column) | 1 for a manager (#39). Ignored on the admin. |
 
 Migration 5 rebuilds `notifications`, because SQLite can't relax its old CHECK on `kind` or its NOT NULL on `day` in place. `dismissals` refers to it and would be emptied by the cascade when the old table is dropped, so its rows are set aside and restored in the same transaction.
+
+Migration 6 rebuilds it again the same way, adding `AUTOINCREMENT` so a notice id is never reused. Otherwise replacing the MOTD frees the highest id for the next notice, and a dismissal sent from a page still showing the old notice hides the new one before anyone sees it.
 
 Deleting a user deletes their answers and dismissals. Users are never deleted in practice; they are disabled.

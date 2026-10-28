@@ -117,10 +117,20 @@ func TestMOTD(t *testing.T) {
 		t.Error("unchanged MOTD reappeared after dismissal")
 	}
 	// A new one does, and replaces the old for everyone.
+	old := got[0].ID
 	s.SetMOTD("Gig moved to the 31st", a.ID, t0.Add(time.Minute))
 	got, _ = s.Notices(a.ID, false, "2026-11-14")
 	if len(got) != 1 || got[0].Body != "Gig moved to the 31st" {
 		t.Fatalf("after replacing: %+v", got)
+	}
+	// It takes a fresh id, so a dismissal from a page still showing the old
+	// one can't hide it unseen.
+	if got[0].ID == old {
+		t.Fatalf("new MOTD reused id %d", old)
+	}
+	s.Dismiss(old, j.ID)
+	if got, _ := s.Notices(j.ID, false, "2026-11-14"); len(got) != 1 {
+		t.Error("dismissing the old MOTD hid the new one")
 	}
 	if m, _ := s.MOTD(); m != "Gig moved to the 31st" {
 		t.Errorf("MOTD = %q", m)

@@ -148,4 +148,35 @@ CREATE TABLE dismissals (
 INSERT INTO dismissals SELECT notification_id, user_id FROM dismissals_keep;
 DROP TABLE dismissals_keep;
 `,
+
+	// 6: notice ids are never reused. Without AUTOINCREMENT, replacing the
+	// MOTD freed the highest id for the next notice, so a dismissal from a
+	// page still showing the old one hid the new one unseen. Rebuilt the
+	// same way as 5; the copied ids seed the sequence.
+	`
+CREATE TABLE dismissals_keep AS SELECT notification_id, user_id FROM dismissals;
+DROP TABLE dismissals;
+
+CREATE TABLE notifications_new (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  kind       TEXT    NOT NULL CHECK (kind IN ('locked', 'cancelled', 'joined', 'motd')),
+  day        TEXT,  -- NULL for a notice not about a day: it never expires
+  audience   TEXT    NOT NULL DEFAULT 'all' CHECK (audience IN ('all', 'managers')),
+  body       TEXT    NOT NULL DEFAULT '',  -- the MOTD's text
+  actor_id   INTEGER REFERENCES users(id),
+  created_at TEXT    NOT NULL
+);
+INSERT INTO notifications_new SELECT id, kind, day, audience, body, actor_id, created_at FROM notifications;
+DROP TABLE notifications;
+ALTER TABLE notifications_new RENAME TO notifications;
+CREATE INDEX notifications_day ON notifications(day);
+
+CREATE TABLE dismissals (
+  notification_id INTEGER NOT NULL REFERENCES notifications(id) ON DELETE CASCADE,
+  user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  PRIMARY KEY (notification_id, user_id)
+);
+INSERT INTO dismissals SELECT notification_id, user_id FROM dismissals_keep;
+DROP TABLE dismissals_keep;
+`,
 }
