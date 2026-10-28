@@ -26,12 +26,27 @@ func pressed(body, value string) bool {
 	return strings.Contains(body, `value="`+value+`" aria-pressed="true"`)
 }
 
-func TestHomeIsToday(t *testing.T) {
+// Home is Upcoming, with today as its top row (#35). The old address
+// still works.
+func TestHomeIsUpcoming(t *testing.T) {
 	e, c := dayEnv(t)
 	body := e.get(t, "/", c).Body.String()
+	first := strings.Index(body, `class="up-row`)
+	if first < 0 || !strings.Contains(body[first:first+120], `href="/day/2026-11-14"`) || !strings.Contains(body, `up-date today">Sat 14 Nov`) {
+		t.Errorf("home isn't Upcoming starting today:\n%s", body)
+	}
+	rec := e.get(t, "/upcoming", c)
+	if rec.Code != http.StatusMovedPermanently || rec.Header().Get("Location") != "/" {
+		t.Errorf("GET /upcoming = %d -> %s", rec.Code, rec.Header().Get("Location"))
+	}
+}
+
+func TestTodaysDay(t *testing.T) {
+	e, c := dayEnv(t)
+	body := e.get(t, "/day/2026-11-14", c).Body.String()
 	for _, want := range []string{"Saturday 14 November", ">today<", `action="/day/2026-11-14/status"`, `href="/day/2026-11-13"`, `href="/day/2026-11-15"`} {
 		if !strings.Contains(body, want) {
-			t.Errorf("home missing %q", want)
+			t.Errorf("today missing %q", want)
 		}
 	}
 	if !pressed(body, "unknown") {
@@ -62,7 +77,7 @@ func TestSetStatusByForm(t *testing.T) {
 	}
 	// Back to [?] clears it.
 	e.do(t, http.MethodPost, "/day/2026-11-14/status", url.Values{"status": {"unknown"}}, c)
-	if body := e.get(t, "/", c).Body.String(); !pressed(body, "unknown") {
+	if body := e.get(t, "/day/2026-11-14", c).Body.String(); !pressed(body, "unknown") {
 		t.Error("clearing didn't return the day to [?]")
 	}
 }
@@ -128,8 +143,8 @@ func TestTodayFollowsGroupTimezone(t *testing.T) {
 	st, _ := e.db.Settings()
 	st.Timezone = "Australia/Brisbane"
 	e.db.SaveSettings(st, fixedNow)
-	if body := e.get(t, "/", c).Body.String(); !strings.Contains(body, "Sunday 15 November") {
-		t.Error("home isn't today in the group timezone")
+	if body := e.get(t, "/", c).Body.String(); !strings.Contains(body, `up-date today">Sun 15 Nov`) {
+		t.Error("today isn't today in the group timezone")
 	}
 }
 
@@ -226,13 +241,34 @@ func TestStatusChangeReturnsSummary(t *testing.T) {
 	}
 }
 
+// The way back to Upcoming is at the top of a day, before the picker (#35).
 func TestDayHasUpcomingButton(t *testing.T) {
 	e, admin := dayEnv(t)
-	body := e.get(t, "/", admin).Body.String()
-	if !strings.Contains(body, `<a class="btn btn-secondary" href="/upcoming">Upcoming</a>`) {
-		t.Error("no full-width Upcoming button")
+	body := e.get(t, "/day/2026-11-14", admin).Body.String()
+	link := strings.Index(body, `<a class="btn btn-top" href="/">See all upcoming</a>`)
+	if link < 0 || link > strings.Index(body, `class="picker"`) {
+		t.Error("no See all upcoming button above the picker")
 	}
 	if strings.Contains(body, "lock-hint") {
 		t.Error("the hint under Lock in is still there")
+	}
+}
+
+// Help is for members, and linked from the menu on home and on a day (#36).
+func TestHelpPage(t *testing.T) {
+	e, c := dayEnv(t)
+	if rec := e.get(t, "/help"); rec.Code != http.StatusUnauthorized {
+		t.Errorf("signed-out GET /help = %d, want 401", rec.Code)
+	}
+	body := e.get(t, "/help", c).Body.String()
+	for _, want := range []string{"Counts as not available for locking in", "Use NO sparingly", "cancels it for everyone", "19:00–22:00"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("help missing %q", want)
+		}
+	}
+	for _, p := range []string{"/", "/day/2026-11-14"} {
+		if !strings.Contains(e.get(t, p, c).Body.String(), `<a href="/help">Help</a>`) {
+			t.Errorf("%s has no Help link", p)
+		}
 	}
 }

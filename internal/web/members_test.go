@@ -90,3 +90,63 @@ func TestUnknownMemberIs404(t *testing.T) {
 		}
 	}
 }
+
+// A manager can lock in and cancel, but can't open the admin pages, and
+// only the admin can make or unmake one (#39).
+func TestManagerRole(t *testing.T) {
+	e, admin := dayEnv(t)
+	m, mgr := e.memberSession(t, "m1")
+	_, jo := e.memberSession(t, "jo")
+
+	// A plain member can't lock in, nor make themselves a manager.
+	if rec := e.do(t, http.MethodPost, "/day/2026-11-20/lock", url.Values{"override": {"1"}}, mgr); rec.Code != http.StatusForbidden {
+		t.Errorf("member lock = %d, want 403", rec.Code)
+	}
+	if rec := e.do(t, http.MethodPost, path(m.ID, "grant-manager"), url.Values{}, mgr); rec.Code != http.StatusForbidden {
+		t.Errorf("member granting themselves manager = %d, want 403", rec.Code)
+	}
+
+	if rec := e.do(t, http.MethodPost, path(m.ID, "grant-manager"), url.Values{}, admin); rec.Code != http.StatusSeeOther {
+		t.Fatalf("grant = %d", rec.Code)
+	}
+	body := e.get(t, "/admin/members", admin).Body.String()
+	if !strings.Contains(body, ">manager<") || !strings.Contains(body, path(m.ID, "revoke-manager")) {
+		t.Error("members page doesn't show the manager or offer to remove them")
+	}
+
+	// The manager is offered lock-in, uses it, and can cancel.
+	if body := e.get(t, "/day/2026-11-20", mgr).Body.String(); !strings.Contains(body, `action="/day/2026-11-20/lock"`) {
+		t.Error("manager isn't offered lock-in")
+	}
+	if rec := e.do(t, http.MethodPost, "/day/2026-11-20/lock", url.Values{"override": {"1"}}, mgr); rec.Code != http.StatusSeeOther {
+		t.Fatalf("manager lock = %d", rec.Code)
+	}
+	if body := e.get(t, "/day/2026-11-20", jo).Body.String(); strings.Contains(body, "/cancel") {
+		t.Error("plain member is offered cancel")
+	}
+	if rec := e.do(t, http.MethodPost, "/day/2026-11-20/cancel", url.Values{}, mgr); rec.Code != http.StatusSeeOther {
+		t.Fatalf("manager cancel = %d", rec.Code)
+	}
+	// But no admin pages, and no admin link.
+	if rec := e.get(t, "/admin/members", mgr); rec.Code != http.StatusForbidden {
+		t.Errorf("manager GET /admin/members = %d, want 403", rec.Code)
+	}
+	if body := e.get(t, "/day/2026-11-20", mgr).Body.String(); strings.Contains(body, `href="/admin"`) {
+		t.Error("manager is shown the admin link")
+	}
+
+	// Revoked: back to a plain member.
+	e.do(t, http.MethodPost, path(m.ID, "revoke-manager"), url.Values{}, admin)
+	if rec := e.do(t, http.MethodPost, "/day/2026-11-21/lock", url.Values{"override": {"1"}}, mgr); rec.Code != http.StatusForbidden {
+		t.Errorf("revoked manager lock = %d, want 403", rec.Code)
+	}
+
+	// The admin is always a manager, so the flag isn't theirs to change.
+	me, _ := e.db.UserBySub(adminID.Sub)
+	if strings.Contains(e.get(t, "/admin/members", admin).Body.String(), path(me.ID, "grant-manager")) {
+		t.Error("admin is offered the manager flag")
+	}
+	if rec := e.do(t, http.MethodPost, path(me.ID, "grant-manager"), url.Values{}, admin); rec.Code != http.StatusBadRequest {
+		t.Errorf("granting the admin manager = %d, want 400", rec.Code)
+	}
+}

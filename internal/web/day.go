@@ -32,9 +32,12 @@ type dayView struct {
 
 	Locked         bool
 	LockedOverride bool
+	LockMessage    string // replaces Summary on a locked day; may be empty
+	DefaultMessage string // pre-fills the lock-in form
+	MaxMessage     int
 	Unavailable    string // who isn't [YES]/[OK]; empty if everyone is
-	CanLock        bool   // admin, editable, not locked
-	CanCancel      bool   // admin, editable, locked
+	CanLock        bool   // admin or manager, editable, not locked
+	CanCancel      bool   // admin or manager, editable, locked
 }
 
 // memberStatus is one enabled member's answer for the day.
@@ -142,11 +145,6 @@ func (s *Server) dayFromPath(w http.ResponseWriter, r *http.Request) (cal.Day, b
 	return d, true
 }
 
-func (s *Server) handleToday(w http.ResponseWriter, r *http.Request, u *store.User) {
-	d, _ := s.today()
-	s.showDay(w, u, d)
-}
-
 func (s *Server) handleDay(w http.ResponseWriter, r *http.Request, u *store.User) {
 	if d, ok := s.dayFromPath(w, r); ok {
 		s.showDay(w, u, d)
@@ -190,11 +188,7 @@ func (s *Server) showDay(w http.ResponseWriter, u *store.User, d cal.Day) {
 	for _, st := range cal.All {
 		v.Picks = append(v.Picks, pick{Value: st.Icon(), Label: st.Label(), Icon: st.Icon(), Selected: st == mine})
 	}
-	title := v.Label
-	if v.IsToday {
-		title = ""
-	}
-	s.render(w, http.StatusOK, "day.html", page{Title: title, User: u, DayView: &v,
+	s.render(w, http.StatusOK, "day.html", page{Title: v.Label, User: u, DayView: &v,
 		StatusIcons: []string{"yes", "ok", "no", "unknown"}})
 }
 
@@ -238,6 +232,9 @@ func (s *Server) handleSetStatus(w http.ResponseWriter, r *http.Request, u *stor
 		summary := ""
 		if group, err := s.groupFor(u, d); err == nil {
 			summary = summarise(group)
+		}
+		if l, err := s.db.LockinFor(d); err == nil {
+			summary = lockedSummary(s.filter().Mask(l.Message))
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"status": st.Icon(), "cancelled": cancels, "summary": summary})
 		return

@@ -6,7 +6,20 @@ Find the days your group can get together.
 
 Each Docker container runs one group, which signs in with Google and joins through an invite link. It is designed for phones first and to run for months without attention.
 
+<p>
+<img src="docs/upcoming.jpg" width="250" alt="Home: the next two months, one row per day, with the group's answers as a bar and your own as an icon">
+<img src="docs/day-locked.jpg" width="250" alt="A locked-in day: notices at the top, the status picker, and the lock-in message above the group's answers">
+<img src="docs/admin.jpg" width="250" alt="Admin: the message of the day, then the group name, timeslot, timezone and language filter">
+</p>
+
 ## Status
+
+**2026.3** builds on the first months of real use:
+- **Home is Upcoming**, the next two months at a glance. Tap a day to answer it.
+- **Managers** can lock in and cancel days without being admin.
+- **Lock-ins carry a message**, by default the timeslot, which a manager can change for a one-off time or place.
+- **Notices:** the admin can post a message of the day, and the admin and managers hear when someone joins.
+- **A help page** explains the answers and the house rules.
 
 **2026.2** is the first release a group can use day to day:
 - **Members** open the app on today, set their availability with one tap, swipe between days, and leave a short note.
@@ -28,11 +41,12 @@ This runs a private instance on your own machine at `http://localhost:8138`, sig
 
 1. Open the [Google Cloud console](https://console.cloud.google.com/) and create a project. Any name will do, e.g. `assemble`.
 2. Go to **APIs & Services → OAuth consent screen**. On newer consoles this is labelled **Google Auth Platform**. Choose **Get started**, then:
-   - **App information:** fill in the app name (your group's name is a good choice) and your email as the support email.
+   - **App information:** set the app name to your group's name exactly as `assemble` shows it (the admin's Group setting), and your email as the support email. Google's brand check compares this name with your homepage.
    - **Audience:** choose **External**.
    - **Contact information:** your email.
    - Agree to the policy and create.
 3. **Branding:** under **App domain**, set the privacy policy link to `https://YOUR-DOMAIN/privacy` and the terms of service link to `https://YOUR-DOMAIN/terms`. `assemble` serves both pages without sign-in. They describe what the software stores; if you need wording specific to your group, take your own advice on it.
+   - Add your domain under **Authorised domains**. Google also requires the domain to be verified in [Search Console](https://search.google.com/search-console) by the Google account that owns this Cloud project. A **Domain** property verified by a DNS TXT record is the simplest route, and a domain can have several verified owners.
 4. **Audience → Publish app**, so that the publishing status reads **In production**.
    - This step matters. While the app is in **Testing**, only Google accounts you list by hand can sign in, so invite links fail for everyone else.
    - `assemble` asks only for the basic `openid`, `email` and `profile` scopes, so publishing needs no review from Google.

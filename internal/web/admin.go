@@ -48,10 +48,50 @@ func (s *Server) handleAdmin(w http.ResponseWriter, r *http.Request, u *store.Us
 }
 
 func (s *Server) handleGroup(w http.ResponseWriter, r *http.Request, u *store.User) {
-	s.render(w, http.StatusOK, "group.html", page{
+	motd, err := s.db.MOTD()
+	if err != nil {
+		s.fail(w, "Couldn't load the settings.", err)
+		return
+	}
+	p := page{
 		Title: "Group", Tab: "group", User: u,
 		Form: s.groupSettings(), Zones: zones, Saved: r.URL.Query().Get("saved") == "1",
-	})
+		MOTD: motd, MaxMessage: store.MaxMessage,
+	}
+	switch r.URL.Query().Get("motd") {
+	case "posted":
+		p.Message = "Message of the day posted."
+	case "removed":
+		p.Message = "Message of the day removed."
+	}
+	s.render(w, http.StatusOK, "group.html", p)
+}
+
+// handleMOTDPost posts, replaces or (when empty) removes the message of the
+// day (#40). A new message shows to everyone again, even those who
+// dismissed the last; the same text again changes nothing.
+func (s *Server) handleMOTDPost(w http.ResponseWriter, r *http.Request, u *store.User) {
+	msg := words.Clean(r.FormValue("motd"))
+	if problem := s.checkMessage(msg); problem != "" {
+		s.render(w, http.StatusBadRequest, "group.html", page{
+			Title: "Group", Tab: "group", User: u, Form: s.groupSettings(), Zones: zones,
+			MOTD: msg, MaxMessage: store.MaxMessage, Error: problem,
+		})
+		return
+	}
+	changed, err := s.db.SetMOTD(msg, u.ID, s.now())
+	if err != nil {
+		s.fail(w, "Couldn't post the message.", err)
+		return
+	}
+	if changed {
+		log.Printf("admin: user=%d set the motd (%d chars)", u.ID, utf8.RuneCountInString(msg))
+	}
+	if msg == "" {
+		http.Redirect(w, r, "/admin/group?motd=removed", http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/admin/group?motd=posted", http.StatusSeeOther)
 }
 
 func (s *Server) handleGroupPost(w http.ResponseWriter, r *http.Request, u *store.User) {
@@ -63,8 +103,10 @@ func (s *Server) handleGroupPost(w http.ResponseWriter, r *http.Request, u *stor
 		BannedWords: cleanList(r.FormValue("banned_words")),
 	}
 	if msg := validateSettings(&st); msg != "" {
+		motd, _ := s.db.MOTD()
 		s.render(w, http.StatusBadRequest, "group.html", page{
 			Title: "Group", Tab: "group", User: u, Form: st, Zones: zones, Error: msg,
+			MOTD: motd, MaxMessage: store.MaxMessage,
 		})
 		return
 	}

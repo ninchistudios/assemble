@@ -82,5 +82,5 @@ func (s *Server) handleUpcoming(w http.ResponseWriter, r *http.Request, u *store
 		}
 		rows = append(rows, row)
 	}
-	s.render(w, http.StatusOK, "upcoming.html", page{Title: "Upcoming", User: u, Upcoming: rows})
+	s.render(w, http.StatusOK, "upcoming.html", page{User: u, Upcoming: rows})
 }

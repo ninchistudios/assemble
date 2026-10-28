@@ -16,7 +16,7 @@ func TestDisplayName(t *testing.T) {
 	}
 	// The group sees the chosen name, and a later sign-in doesn't undo it.
 	e.session(t, jo2Info)
-	if body := e.get(t, "/", admin).Body.String(); !strings.Contains(body, "Jo the Drummer") {
+	if body := e.get(t, "/day/2026-11-14", admin).Body.String(); !strings.Contains(body, "Jo the Drummer") {
 		t.Error("the group doesn't see the chosen name")
 	}
 	if body := e.get(t, "/profile", jo).Body.String(); !strings.Contains(body, `value="Jo the Drummer"`) || !strings.Contains(body, "Member jo") {
@@ -28,7 +28,7 @@ func TestDisplayName(t *testing.T) {
 	}
 	// Empty goes back to the Google name.
 	e.do(t, http.MethodPost, "/profile", url.Values{"display_name": {""}}, jo)
-	if body := e.get(t, "/", admin).Body.String(); strings.Contains(body, "Jo the Drummer") || !strings.Contains(body, "Member jo") {
+	if body := e.get(t, "/day/2026-11-14", admin).Body.String(); strings.Contains(body, "Jo the Drummer") || !strings.Contains(body, "Member jo") {
 		t.Error("clearing didn't return to the Google name")
 	}
 }

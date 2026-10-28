@@ -17,8 +17,8 @@ GitHub Actions publishes `ghcr.io/ninchistudios/assemble` with two kinds of tag:
 | Tag | Tracks |
 |---|---|
 | `main` | The latest commit on `main` |
-| `2026.2` | The latest commit on a release branch, while it is being tested before merging |
-| `v2026.2` | A release, frozen |
+| `2026.3` | The latest commit on a release branch, while it is being tested before merging |
+| `v2026.3` | A release, frozen |
 
 For the low-maintenance setup this app is built for, pin a release tag and move it on deliberately. Use `main` only if you want every change as it lands.
 
@@ -150,7 +150,7 @@ To build with Compose instead, replace `image:` with a `build:` section that pas
     build:
       context: .
       args:
-        VERSION: "2026.2"   # match the VERSION file
+        VERSION: "2026.3"   # match the VERSION file
         COMMIT: ${ASSEMBLE_COMMIT:-}
         BRANCH: ${ASSEMBLE_BRANCH:-}
 ```
@@ -170,6 +170,8 @@ A copy whose `ASSEMBLE_BASE_URL` is `localhost` or `127.0.0.1` marks every page 
 |---|---|
 | `redirect_uri_mismatch` at Google | `ASSEMBLE_BASE_URL` + `/auth/callback` doesn't exactly match a redirect URI on the OAuth client. Scheme, host and port must all match. |
 | Members get "access blocked" or an error at Google, but the admin can sign in | The consent screen is still in **Testing**. Publish it to **In production** (README step 1). |
+| Brand verification: "not registered to you" | The homepage's domain isn't verified in Search Console by the account that owns the Cloud project (README step 1). Verify it, then wait 24 hours before retrying. |
+| Brand verification: app name "does not match" | The consent screen's app name must match the group name shown on the homepage. |
 | Container exits with `config: missing required environment: ...` | The message names every variable that is unset. On Portainer, remember that `env_file:` is ignored. |
 | `ASSEMBLE_DEV_BYPASS only runs against http://localhost`, or `needs ASSEMBLE_LISTEN on a loopback address` | The dev bypass was left on in a server config. Remove it. |
 | 502 from the proxy | The proxy scheme is `https`; it must be `http`. Or the proxy and container aren't on the same Docker network. |

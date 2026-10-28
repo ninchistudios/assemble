@@ -18,10 +18,17 @@
 {{if .Local}}<span class="tag env-tag">local</span>{{end}}
 </header>
 {{if .Notices}}<ul class="notices" aria-label="Notifications">
-{{range .Notices}}<li class="notice-{{.Kind}}"><a href="{{.Href}}"><b>{{.Text}}</b>{{if .Meta}} <span class="muted">{{.Meta}}</span>{{end}}</a><form class="dismiss" method="post" action="/notices/{{.ID}}/dismiss"><button type="submit" aria-label="Dismiss">{{template "x-icon"}}</button></form></li>
+{{range .Notices}}<li class="notice-{{.Kind}}">{{if .Href}}<a class="notice-text" href="{{.Href}}">{{else}}<span class="notice-text">{{end}}<b>{{.Text}}</b>{{if .Meta}} <span class="muted">{{.Meta}}</span>{{end}}{{if .Href}}</a>{{else}}</span>{{end}}<form class="dismiss" method="post" action="/notices/{{.ID}}/dismiss"><button type="submit" aria-label="Dismiss">{{template "x-icon"}}</button></form></li>
 {{end}}</ul>{{end}}
 <main>
 {{end}}
+
+{{define "menu"}}<nav class="menu">
+{{if .User.IsAdmin}}<a href="/admin">Admin</a>{{end}}
+<a href="/help">Help</a>
+<form method="post" action="/auth/logout"><button type="submit" class="link">Sign out</button></form>
+</nav>
+<p class="muted signed-in">Signed in as <span class="me">{{.User.Name}}</span> <a href="/profile">change display name</a></p>{{end}}
 
 {{define "bottom"}}
 </main>

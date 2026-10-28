@@ -84,9 +84,15 @@ func (s *Store) ActiveInvite(token string) (Invite, error) {
 // JoinViaInvite creates a member through the invite with this token, only if
 // that invite is active at the moment of the insert. The check and the insert
 // are one statement, so a link disabled a moment earlier cannot let anyone
-// through. ErrNotFound means there is no active invite with that token.
+// through. ErrNotFound means there is no active invite with that token. The
+// admin and managers are told who joined (#38), in the same transaction.
 func (s *Store) JoinViaInvite(token, sub, email, name string, now time.Time) (User, error) {
-	res, err := s.db.Exec(`
+	tx, err := s.db.Begin()
+	if err != nil {
+		return User{}, err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(`
 INSERT INTO users (sub, email, name, role, invite_id, created_at)
 SELECT ?, ?, ?, ?, id, ? FROM invites WHERE token = ? AND disabled_at IS NULL`,
 		sub, email, name, RoleMember, Stamp(now), token)
@@ -97,6 +103,16 @@ SELECT ?, ?, ?, ?, id, ? FROM invites WHERE token = ? AND disabled_at IS NULL`,
 		return User{}, err
 	} else if n == 0 {
 		return User{}, ErrNotFound
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return User{}, err
+	}
+	if err := addNotice(tx, NoticeJoined, "", "managers", "", id, now); err != nil {
+		return User{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return User{}, err
 	}
 	return s.UserBySub(sub)
 }

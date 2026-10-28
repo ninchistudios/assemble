@@ -1,6 +1,7 @@
 package store
 
 import (
+	"database/sql"
 	"path/filepath"
 	"testing"
 )
@@ -74,5 +75,61 @@ func TestForeignKeysEnforced(t *testing.T) {
 	_, err := s.db.Exec(`INSERT INTO sessions (token_hash, user_id, created_at, expires_at) VALUES ('x', 42, '', '')`)
 	if err == nil {
 		t.Fatal("session for a missing user was accepted")
+	}
+}
+
+// TestMigration5KeepsNotices upgrades a 2026.2 database: the notifications
+// rebuild must carry every notice and dismissal across, and the old
+// constraints must have gone.
+func TestMigration5KeepsNotices(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "test.db")
+	raw, err := sql.Open("sqlite", "file:"+path+"?_pragma=foreign_keys(ON)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, m := range migrations[:4] {
+		if _, err := raw.Exec(m); err != nil {
+			t.Fatalf("migration %d: %v", i+1, err)
+		}
+	}
+	for _, q := range []string{
+		`PRAGMA user_version = 4`,
+		`INSERT INTO users (id, sub, email, name, role, created_at) VALUES (1, 's', 'a@example.com', 'Ada', 'admin', '2026-11-01T00:00:00Z')`,
+		`INSERT INTO notifications (id, kind, day, actor_id, created_at) VALUES (7, 'locked', '2026-11-20', 1, '2026-11-01T00:00:00Z')`,
+		`INSERT INTO dismissals (notification_id, user_id) VALUES (7, 1)`,
+	} {
+		if _, err := raw.Exec(q); err != nil {
+			t.Fatalf("%s: %v", q, err)
+		}
+	}
+	raw.Close()
+
+	s, err := Open(path)
+	if err != nil {
+		t.Fatalf("upgrade: %v", err)
+	}
+	defer s.Close()
+	var kind, day, audience string
+	if err := s.db.QueryRow(`SELECT kind, day, audience FROM notifications WHERE id = 7`).Scan(&kind, &day, &audience); err != nil {
+		t.Fatalf("notice lost: %v", err)
+	}
+	if kind != "locked" || day != "2026-11-20" || audience != "all" {
+		t.Errorf("notice = %s %s %s", kind, day, audience)
+	}
+	var n int
+	s.db.QueryRow(`SELECT COUNT(*) FROM dismissals WHERE notification_id = 7 AND user_id = 1`).Scan(&n)
+	if n != 1 {
+		t.Error("dismissal lost")
+	}
+	// The cascade still works on the rebuilt table.
+	s.db.Exec(`DELETE FROM notifications WHERE id = 7`)
+	if s.db.QueryRow(`SELECT COUNT(*) FROM dismissals`).Scan(&n); n != 0 {
+		t.Error("dismissals no longer cascade")
+	}
+	if _, err := s.db.Exec(`INSERT INTO notifications (kind, audience, created_at) VALUES ('joined', 'managers', '2026-11-01T00:00:00Z')`); err != nil {
+		t.Errorf("a dayless notice for managers is refused: %v", err)
+	}
+	if u, _ := s.UserByID(1); u.Manager || !u.CanManage() {
+		t.Errorf("admin after upgrade = %+v", u)
 	}
 }

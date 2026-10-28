@@ -18,6 +18,7 @@ type User struct {
 	Email     string
 	Name      string // what the group sees: DisplayName if set, else GoogleName
 	Role      string
+	Manager   bool // may lock in and cancel; see CanManage
 	Enabled   bool
 	InviteID  int64 // 0 for the bootstrap admin
 	CreatedAt time.Time
@@ -28,14 +29,18 @@ type User struct {
 
 func (u User) IsAdmin() bool { return u.Role == RoleAdmin }
 
-const userCols = `id, sub, email, name, COALESCE(display_name, ''), role, enabled, COALESCE(invite_id, 0), created_at`
+// CanManage reports whether u may lock in, cancel and word a lock-in (#39).
+// The admin always can; anyone else needs the manager flag.
+func (u User) CanManage() bool { return u.IsAdmin() || u.Manager }
+
+const userCols = `id, sub, email, name, COALESCE(display_name, ''), role, manager, enabled, COALESCE(invite_id, 0), created_at`
 
 type scanner interface{ Scan(...any) error }
 
 func scanUser(row scanner) (User, error) {
 	var u User
 	var created string
-	err := row.Scan(&u.ID, &u.Sub, &u.Email, &u.GoogleName, &u.DisplayName, &u.Role, &u.Enabled, &u.InviteID, &created)
+	err := row.Scan(&u.ID, &u.Sub, &u.Email, &u.GoogleName, &u.DisplayName, &u.Role, &u.Manager, &u.Enabled, &u.InviteID, &created)
 	if errors.Is(err, sql.ErrNoRows) {
 		return User{}, ErrNotFound
 	}
@@ -144,6 +149,13 @@ func (s *Store) SetEnabled(id int64, enabled bool) error {
 		}
 	}
 	return tx.Commit()
+}
+
+// SetManager grants or revokes the manager flag. It means nothing on the
+// admin, who can always manage.
+func (s *Store) SetManager(id int64, manager bool) error {
+	_, err := s.db.Exec(`UPDATE users SET manager = ? WHERE id = ?`, manager, id)
+	return err
 }
 
 func (s *Store) SetRole(id int64, role string) error {

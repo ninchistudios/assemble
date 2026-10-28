@@ -15,9 +15,9 @@ func TestUpcoming(t *testing.T) {
 	e.do(t, http.MethodPost, "/day/2026-11-21/status", url.Values{"status": {"no"}}, jo)
 	e.do(t, http.MethodPost, "/day/2026-11-22/lock", url.Values{"override": {"1"}}, admin)
 
-	rec := e.get(t, "/upcoming", jo)
+	rec := e.get(t, "/", jo)
 	if rec.Code != http.StatusOK {
-		t.Fatalf("GET /upcoming = %d", rec.Code)
+		t.Fatalf("GET / = %d", rec.Code)
 	}
 	body := rec.Body.String()
 	// From today to the horizon, with month headings.
@@ -53,7 +53,7 @@ func TestUpcomingIconsHaveText(t *testing.T) {
 	e, admin := dayEnv(t)
 	e.do(t, http.MethodPost, "/day/2026-11-20/status", url.Values{"status": {"yes"}}, admin)
 	e.do(t, http.MethodPost, "/day/2026-11-20/lock", url.Values{}, admin)
-	body := e.get(t, "/upcoming", admin).Body.String()
+	body := e.get(t, "/", admin).Body.String()
 	if !strings.Contains(body, `<span class="sr-only">You: YES</span>`) || !strings.Contains(body, `<span class="sr-only">Locked in</span>`) {
 		t.Error("upcoming icons have no screen-reader text")
 	}

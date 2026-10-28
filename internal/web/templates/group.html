@@ -1,7 +1,14 @@
 {{define "group.html"}}{{template "top" .}}
 {{template "admin-tabs" .}}
 {{if .Saved}}<div class="notice ok">Saved.</div>{{end}}
+{{with .Message}}<div class="notice ok">{{.}}</div>{{end}}
 {{if .Error}}<div class="notice error">{{.Error}}</div>{{end}}
+<form class="field motd-form" method="post" action="/admin/motd">
+<label for="motd">Message of the day <span class="muted">optional</span></label>
+<div class="msg-row"><input id="motd" name="motd" type="text" maxlength="{{.MaxMessage}}" value="{{.MOTD}}" autocomplete="off">
+<button class="btn btn-quiet btn-small" type="submit">Post</button></div>
+<p class="hint">Shown at the top of everyone's pages until they dismiss it. A new message shows to everyone again. Empty the field and post to remove it.</p>
+</form>
 <form method="post" action="/admin/group">
 <div class="field"><label for="group_name">Group name</label><input id="group_name" name="group_name" type="text" maxlength="60" value="{{.Form.GroupName}}" required></div>
 <div class="field">
